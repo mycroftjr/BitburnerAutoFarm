@@ -1,12 +1,13 @@
 {
+  "compileOnSave": true,
   "include": [
     "NetscriptDefinitions.d.ts",
     "global.d.ts",
     "src/**/*",
   ],
   "compilerOptions": {
-    "module": "esnext",
-    "target": "esnext",
+    "module": "ESNext",
+    "target": "ESNext",
     "moduleResolution": "node",
     "noImplicitReturns": true,
     "noImplicitThis": true,
@@ -24,6 +25,11 @@
       "@ns": [
         "../NetscriptDefinitions.d.ts"
       ]
-    }
+    },
+    "skipLibCheck": true,
+    "keyofStringsOnly": true,
+    // Output formatting
+    "preserveWatchOutput": false,
+    "pretty": true,
   }
 }
