@@ -8,5 +8,5 @@ wget https://raw.githubusercontent.com/mycroftjr/BitburnerAutoFarm/master/dist/a
 ```
 Then, simply `run autoFarm.js` and enjoy!
 
-For contributors:
+# For contributors:
 See https://github.com/bitburner-official/bitburner-vscode and https://github.com/bitburner-official/vscode-template for building help.
