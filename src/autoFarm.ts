@@ -59,6 +59,9 @@ export async function main(ns: NS): Promise<void> {
 		Hack: "H"
 	};
 
+	/** The server from which this script is being run */
+	const HOME = ns.getHostname();
+
 	/** A list of all server names. Currently unused.
 	 * @type {string[]} */
 	let servers: string[];
@@ -184,7 +187,7 @@ export async function main(ns: NS): Promise<void> {
 					hosts.push([info('MR', server), server]);
 				}
 				servers.push(server)
-				await ns.scp(files, 'home', server)
+				await ns.scp(files, HOME, server)
 				await scanServers(current, server)
 			}
 		}
@@ -224,7 +227,7 @@ export async function main(ns: NS): Promise<void> {
 			/** The total amount of security levels that can be removed */
 			const securityAmount = info('SL', target) - info('MSL', target)
 			/** As in `growthAnalyze`, the optimal g such that MoneyAvailable * g = MoneyMax */
-			const growthAmount = info('MM', target) / info('MA', target)
+			const growthAmount = Math.min(info('MM', target) / info('MA', target), info('MM', target))
 			const weakenEffect = ns.weakenAnalyze(1, ns.getServer(host[1]).cpuCores)
 			/** The increase in security levels that any new `hack()` will create */
 			let hackSecurity = 0;
@@ -256,7 +259,7 @@ export async function main(ns: NS): Promise<void> {
 					}
 				}
 				if (hType === HType.Hack && !ns.scriptRunning(files[2], host[1])) {
-					if (fRam() < 2) {
+					if (fRam() < 2 && host[1] != HOME) {
 						ns.killall(host[1])
 					}
 					const maxThreads = Math.floor(fRam() / 1.7);
@@ -353,10 +356,10 @@ export async function main(ns: NS): Promise<void> {
 	ns.tail()
 	let i = 0
 	while (true) { // Keeps everything running once per second
-		servers = []; targets = []; hosts = [[Math.max(info('MR', 'home') - 50, 0), 'home']]; exes = []
+		servers = []; targets = []; hosts = [[Math.max(info('MR', HOME) - 50, 0), HOME]]; exes = []
 		act = {}
 		await scanExes()
-		await scanServers('', 'home')
+		await scanServers('', HOME)
 		await hackAll()
 		if (netManager) { await hnManager() }
 		if (serverManager) { await pServerManager() }
