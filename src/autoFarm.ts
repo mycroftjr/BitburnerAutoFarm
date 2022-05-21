@@ -398,7 +398,7 @@ export async function main(ns: NS): Promise<void> {
 		for (let i = 0; i < ns.hacknet.numNodes(); i++) {
 			for (const part of ["Level", "Ram", "Core"]) {
 				if (checkM((ns.hacknet["get" + part + "UpgradeCost" as keyof typeof ns.hacknet] as (index: number, n: number) => number)(i, 1), d)) {
-					(ns.hacknet[("upgrade" + part) as keyof typeof ns.hacknet] as (index: number, n: number) => number)(i, 1);
+					(ns.hacknet["upgrade" + part as keyof typeof ns.hacknet] as (index: number, n: number) => number)(i, 1);
 				}
 			}
 		}
@@ -441,11 +441,13 @@ export async function main(ns: NS): Promise<void> {
 		if (netManager) { await hnManager(HACKNET_MONEY_PROPORTION) }
 		if (serverManager) { await pServerManager(PSERV_MONEY_PROPORTION) }
 		if (ADDITIONAL_SCRIPTS && (i++ >= ADDITIONAL_SCRIPTS_PERIOD / PERIOD)) {
-			try { ADDITIONAL_SCRIPTS.map((script) => ns.run(script)) } catch { }
+			try {
+				ADDITIONAL_SCRIPTS.map((script) => ns.run(script))
+			} catch { }
 			i = 0;
 		}
 		log()
 		const MILLIS_PER_SECOND = 1000.0
-		await ns.asleep(PERIOD * MILLIS_PER_SECOND)
+		await ns.sleep(PERIOD * MILLIS_PER_SECOND)
 	}
 }

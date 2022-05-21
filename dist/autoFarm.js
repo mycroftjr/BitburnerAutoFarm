@@ -399,7 +399,7 @@ export async function main(ns) {
         for (let i = 0; i < ns.hacknet.numNodes(); i++) {
             for (const part of ["Level", "Ram", "Core"]) {
                 if (checkM(ns.hacknet["get" + part + "UpgradeCost"](i, 1), d)) {
-                    ns.hacknet[("upgrade" + part)](i, 1);
+                    ns.hacknet["upgrade" + part](i, 1);
                 }
             }
         }
@@ -459,6 +459,6 @@ export async function main(ns) {
         }
         log();
         const MILLIS_PER_SECOND = 1000.0;
-        await ns.asleep(PERIOD * MILLIS_PER_SECOND);
+        await ns.sleep(PERIOD * MILLIS_PER_SECOND);
     }
 }
