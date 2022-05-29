@@ -219,7 +219,7 @@ export async function main(ns) {
         
         if (netManager || serverManager) {
             pprint("╠", "═", "╣");
-            let tmp = "║ MANAGER";
+            let tmp = "║ MANAGERS";
             if (netManager) {
                 tmp += " ║ HN-Nodes " + ns.hacknet.numNodes();
             }
@@ -228,6 +228,12 @@ export async function main(ns) {
             }
             pprint(tmp, " ", "║");
         }
+        
+        if (SHARE_REMAINING_RAM) {
+            pprint("╠", "═", "╣");
+            pprint(`║ SHARE POWER ${ns.getSharePower()}`, " ", "║");
+        }
+        
         if (PRINT_LOWER_PROFITS) {
             pprint("╠═══╦", "═", "╣");
             pprint(`║ ${cycle[cycle[0]]} ║ LOWER PROFIT`, " ", "BALANCE     ║");
@@ -265,6 +271,7 @@ export async function main(ns) {
             }
         }
         if (!prev) {
+            // only need to sort right before we leave the recursion
             targets = arraySort(targets);
             hosts = arraySort(hosts);
         }
@@ -338,7 +345,6 @@ export async function main(ns) {
                     const threads = Math.min(maxThreads, Math.floor(ns.hackAnalyzeThreads(target, MAX_DRAIN * info("MM", target))));
                     if (threads > 0) {
                         resetShare();
-                        // `hack()` with `threads` number of threads
                         ns.exec(FILES[hType], host[1], threads, target);
                         hackSecurity = hackSLChange * threads;
                     }
@@ -438,8 +444,8 @@ export async function main(ns) {
     while (true) {
         servers = [];
         targets = [];
-        hosts = [[Math.max(info("MR", HOME) - KEEP_FREE, 0), HOME]];
         exes = [];
+        hosts = [[Math.max(info("MR", HOME) - KEEP_FREE, 0), HOME]];
         act = {};
         await scanExes();
         await scanServers("", HOME);

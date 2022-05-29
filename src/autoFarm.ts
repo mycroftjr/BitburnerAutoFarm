@@ -24,7 +24,7 @@ export async function main(ns: NS): Promise<void> {
 
 	// Logic parameters
 	/** Servers names that won't be used as hosts or get deleted */
-	const EXCLUDE = [""]
+	const EXCLUDE = [""];
 	/** The percent of maxmium money under which we'll `grow()` instead of `hack()`ing */
 	const GROW_THRESHOLD = 0.8;
 	/** The amount of security levels above the minimum after which we'll only `weaken()` */
@@ -54,26 +54,26 @@ export async function main(ns: NS): Promise<void> {
 
 	/** CONFIG VALIDATION START */
 	/** A number that displays in a small number of characters, such as 1m */
-	const SHORT_NUMBER = 1000000
+	const SHORT_NUMBER = 1000000;
 	/** A number that displays in a large number of characters, such as 123m */
-	const LONG_NUMBER = 123456789
+	const LONG_NUMBER = 123456789;
 	function lengthOfLastLog() {
 		const logs = ns.getScriptLogs();
 		return logs[logs.length-1].length;
 	}
 	// print the shortest server line that would ever be printed
-	printServerLine("X", "".padEnd(MIN_SERVER_CHARACTERS), 0, SHORT_NUMBER)
+	printServerLine("X", "".padEnd(MIN_SERVER_CHARACTERS), 0, SHORT_NUMBER);
 	const MIN_OUTPUT_CHARS = Math.min(lengthOfLastLog(), "║ EXE 5/5 ║ HOSTS 69 ║ TARGETS 25 ║".length);
 	if (OUTPUT_WIDTH < MIN_OUTPUT_CHARS) {
 		ns.toast("You must increase OUTPUT_WIDTH and/or decrease MIN_SERVER_CHARACTERS by "
 			+ `${MIN_OUTPUT_CHARS - OUTPUT_WIDTH} to make lines fit!`, "error", null);
 	} else {
 		// print the longest server line that could ever be printed
-		printServerLine("X", "".padEnd(MIN_SERVER_CHARACTERS), LONG_NUMBER, LONG_NUMBER)
+		printServerLine("X", "".padEnd(MIN_SERVER_CHARACTERS), LONG_NUMBER, LONG_NUMBER);
 		const MAX_OUTPUT_CHARS = lengthOfLastLog();
 		if (OUTPUT_WIDTH < MAX_OUTPUT_CHARS) {
 			ns.toast("funky UI stuff may occur unless you increase OUTPUT_WIDTH or decrease "
-				+ `MIN_SERVER_CHARACTERS by ${MAX_OUTPUT_CHARS - OUTPUT_WIDTH}`, "warning", null)
+				+ `MIN_SERVER_CHARACTERS by ${MAX_OUTPUT_CHARS - OUTPUT_WIDTH}`, "warning", null);
 		}
 	}
 
@@ -105,13 +105,13 @@ export async function main(ns: NS): Promise<void> {
 	await ns.write(FILES[HType.Grow], "export async function main(ns) {\nawait ns.grow(ns.args[0])\n}", "w");
 	await ns.write(FILES[HType.Weaken], "export async function main(ns) {\nawait ns.weaken(ns.args[0])\n}", "w");
 	await ns.write(FILES[HType.Hack], "export async function main(ns) {\nawait ns.hack(ns.args[0])\n}", "w");
-	await ns.write(FILES[HType.Share], "export async function main(ns) {\nwhile(true) {\nawait ns.share()\n}\n}", "w")
+	await ns.write(FILES[HType.Share], "export async function main(ns) {\nwhile(true) {\nawait ns.share()\n}\n}", "w");
 
 	/** The RAM costs of each HType */
-    const RAM_COSTS = FILES.map((file) => ns.getScriptRam(file))
-    const WEAKEN_GROW_COST = Math.max(RAM_COSTS[HType.Grow], RAM_COSTS[HType.Weaken])
+    const RAM_COSTS = FILES.map((file) => ns.getScriptRam(file));
+    const WEAKEN_GROW_COST = Math.max(RAM_COSTS[HType.Grow], RAM_COSTS[HType.Weaken]);
     /** the largest cost in RAM of grow.js, weak.js, or hack.js */
-    const ACT_COST = Math.max(WEAKEN_GROW_COST, RAM_COSTS[HType.Hack])
+    const ACT_COST = Math.max(WEAKEN_GROW_COST, RAM_COSTS[HType.Hack]);
 
 	/** The server from which this script is being run */
 	const HOME = ns.getHostname();
@@ -143,11 +143,11 @@ export async function main(ns: NS): Promise<void> {
 	/** @nosideeffects
 	 * @param {number} c the cost being checked
 	 * @param {number} d the denominator/proportion of money considered available */
-	const checkM = (c: number, d: number) => { return c < ns.getPlayer().money / d }
+	const checkM = (c: number, d: number) => { return c < ns.getPlayer().money / d };
 	/** @param {[number,T][]} arr
 	 * @modifies {arr}
 	 * @template T */
-	const arraySort = <T>(arr: [number,T][]) => arr.sort((a, b) => b[0] - a[0])
+	const arraySort = <T>(arr: [number,T][]) => arr.sort((a, b) => b[0] - a[0]);
 	/** @param {string} t The type of info to get; an acronym of
 	 * MaxMoney, MoneyAvailable, MaxRam, UsedRam, NumPortsRequired,
 	 * RequiredHackingLevel, SecurityLevel, or MinSecurityLevel.
@@ -170,7 +170,7 @@ export async function main(ns: NS): Promise<void> {
 	async function scanExes() {
 		for (const exe of ["brutessh", "ftpcrack", "relaysmtp", "sqlinject", "httpworm"]) {
 			if (ns.fileExists(exe + ".exe")) {
-				exes.push(exe)
+				exes.push(exe);
 			}
 		}
 	}
@@ -178,8 +178,10 @@ export async function main(ns: NS): Promise<void> {
 	/** Truncates the given server name for display 
 	 * @param {string} s */
 	function str(s: string) {
-		if (s.length <= MIN_SERVER_CHARACTERS + 1) { return s }
-		return s.substring(0, MIN_SERVER_CHARACTERS) + "…"
+		if (s.length <= MIN_SERVER_CHARACTERS + 1) {
+			return s;
+		}
+		return s.substring(0, MIN_SERVER_CHARACTERS) + "…";
 	}
 
 	/** Prints a server status line.
@@ -188,7 +190,7 @@ export async function main(ns: NS): Promise<void> {
 	 * @param {number} MA The amount of money available on the server
 	 * @param {number} MM The maximum amount of money the server can contain */
 	function printServerLine(action: string, name: string, MA: number, MM: number) {
-		pprint(`║ ${action} ║ ${name}`, " ", `${ns.nFormat(MA, "0a")} / ${ns.nFormat(MM, "0a")} : ${ns.nFormat(MA / MM, "0%")} ║`)
+		pprint(`║ ${action} ║ ${name}`, " ", `${ns.nFormat(MA, "0a")} / ${ns.nFormat(MM, "0a")} : ${ns.nFormat(MA / MM, "0%")} ║`);
 	}
 
 	/** Does `ns.print` of the `prefix` then `str`, padded in the middle by `pad` such that the line length is `OUTPUT_WIDTH`.
@@ -196,44 +198,50 @@ export async function main(ns: NS): Promise<void> {
 	 * @param {string} str 
 	 * @param {string} pad */
 	function pprint(prefix: string, pad: string, str: string) {
-		ns.print(prefix, str.padStart(OUTPUT_WIDTH - prefix.length, pad))
+		ns.print(prefix, str.padStart(OUTPUT_WIDTH - prefix.length, pad));
 	}
 
 	function log() {
 		if (++cycle[0] >= cycle.length) {
-			cycle[0] = 1
+			cycle[0] = 1;
 		}
 		ns.clearLog();
 		// https://www.compart.com/en/unicode/block/U+2500
-		pprint("╔═══╦", "═", "╗")
-		const tmp = targets.slice(0, NUM_HIGH_PROFIT_TARGS)
+		pprint("╔═══╦", "═", "╗");
+		const tmp = targets.slice(0, NUM_HIGH_PROFIT_TARGS);
 		pprint(`║ ${cycle[cycle[0]]} ║ HIGH PROFIT`, " ", "BALANCE     ║");
 		for (const t of tmp) {
-			printServerLine(act[t[1]], str(t[1]), info("MA", t[1]), info("MM", t[1]))
+			printServerLine(act[t[1]], str(t[1]), info("MA", t[1]), info("MM", t[1]));
 		}
-		pprint("╠═══╩", "═", "╣")
-		pprint(`║ EXE ${exes.length}/5 ║ HOSTS ${hosts.length} ║ TARGETS ${targets.length}`, " ", "║")
+		pprint("╠═══╩", "═", "╣");
+		pprint(`║ EXE ${exes.length}/5 ║ HOSTS ${hosts.length} ║ TARGETS ${targets.length}`, " ", "║");
 
 		if (netManager || serverManager) {
-			pprint("╠", "═", "╣")
-			let tmp = "║ MANAGER"
+			pprint("╠", "═", "╣");
+			let tmp = "║ MANAGERS";
 			if (netManager) {
 				tmp += " ║ HN-Nodes " + ns.hacknet.numNodes();
 			}
 			if (serverManager) {
 				tmp += " ║ P-Servers " + ns.getPurchasedServers().length;
 			}
-			pprint(tmp, " ", "║")
+			pprint(tmp, " ", "║");
 		}
+
+		if (SHARE_REMAINING_RAM) {
+			pprint("╠", "═", "╣");
+			pprint(`║ SHARE POWER ${ns.getSharePower()}`, " ", "║");
+		}
+
 		if (PRINT_LOWER_PROFITS) {
-			pprint("╠═══╦", "═", "╣")
-			pprint(`║ ${cycle[cycle[0]]} ║ LOWER PROFIT`, " ", "BALANCE     ║")
-			const tmp = targets.slice(NUM_HIGH_PROFIT_TARGS, MAX_LINES - ns.getScriptLogs().length)
+			pprint("╠═══╦", "═", "╣");
+			pprint(`║ ${cycle[cycle[0]]} ║ LOWER PROFIT`, " ", "BALANCE     ║");
+			const tmp = targets.slice(NUM_HIGH_PROFIT_TARGS, MAX_LINES - ns.getScriptLogs().length);
 			for (const t of tmp) {
-				printServerLine(act[t[1]], str(t[1]), info("MA", t[1]), info("MM", t[1]))
+				printServerLine(act[t[1]], str(t[1]), info("MA", t[1]), info("MM", t[1]));
 			}
 		} else {
-			pprint("╚", "═", "╝")
+			pprint("╚", "═", "╝");
 		}
 	}
 
@@ -246,9 +254,9 @@ export async function main(ns: NS): Promise<void> {
 			if ((ns.getPurchasedServers().includes(server) || info("NPR", server) <= exes.length) && prev != server) {
 				if (!ns.getPurchasedServers().includes(server)) {
 					for (const exe of exes) {
-						(ns[exe as keyof NS] as (server: string) => void)(server)
+						(ns[exe as keyof NS] as (server: string) => void)(server);
 					}
-					ns.nuke(server)
+					ns.nuke(server);
 				}
 				if (info("MM", server) > 0 && info("RHL", server) <= ns.getHackingLevel() && info("MSL", server) < MAX_MSL) {
 					targets.push([Math.floor(info("MM", server) / info("MSL", server)), server]);
@@ -256,12 +264,13 @@ export async function main(ns: NS): Promise<void> {
 				if (info("MR", server) > ACT_COST && !EXCLUDE.includes(server)) {
 					hosts.push([info("MR", server), server]);
 				}
-				servers.push(server)
-				await ns.scp(FILES, HOME, server)
-				await scanServers(current, server)
+				servers.push(server);
+				await ns.scp(FILES, HOME, server);
+				await scanServers(current, server);
 			}
 		}
 		if (!prev) {
+			// only need to sort right before we leave the recursion
 			targets = arraySort(targets);
 			hosts = arraySort(hosts);
 		}
@@ -295,10 +304,10 @@ export async function main(ns: NS): Promise<void> {
 				sharedRAM = 0;
 			}
 			/** The total amount of security levels that can be removed */
-			const securityAmount = info("SL", target) - info("MSL", target)
+			const securityAmount = info("SL", target) - info("MSL", target);
 			/** As in `growthAnalyze`, the optimal g such that MoneyAvailable * g = MoneyMax */
-			const growthAmount = Math.min(info("MM", target) / info("MA", target), info("MM", target))
-			const cores = ns.getServer(host[1]).cpuCores
+			const growthAmount = Math.min(info("MM", target) / info("MA", target), info("MM", target));
+			const cores = ns.getServer(host[1]).cpuCores;
 			const growSLChange = ns.growthAnalyzeSecurity(1, undefined, cores);
 			const weakenSLChange = ns.weakenAnalyze(1, cores);
 			const hackSLChange = ns.hackAnalyzeSecurity(1, target);
@@ -316,7 +325,7 @@ export async function main(ns: NS): Promise<void> {
 				const threads = Math.ceil(Math.min(maxThreads, securityAmount / weakenSLChange));
 				if (threads > 0) {
 					resetShare();
-					ns.exec(FILES[hType], host[1], threads, target)
+					ns.exec(FILES[hType], host[1], threads, target);
 				}
 			} else {
 				hType = HType.Hack;
@@ -324,20 +333,19 @@ export async function main(ns: NS): Promise<void> {
 					if (ns.isRunning(FILES[HType.Hack], h[1], target) && h[1] != host[1]) {
 						// Some other host is already hacking this target. let's grow instead.
 						hType = HType.Grow;
-						break
+						break;
 					}
 				}
 				if (hType === HType.Hack && !ns.scriptRunning(FILES[hType], host[1])) {
 					if (fRam() < RAM_COSTS[hType] && host[1] != HOME) {
-						ns.killall(host[1])
+						ns.killall(host[1]);
 					}
 					const maxThreads = Math.floor(fRam() / RAM_COSTS[hType]);
 					const threads = Math.min(maxThreads, Math.floor(ns.hackAnalyzeThreads(target, MAX_DRAIN * info("MM", target))));
 					if (threads > 0) {
 						resetShare();
-						// `hack()` with `threads` number of threads
-						ns.exec(FILES[hType], host[1], threads, target)
-						hackSecurity = hackSLChange * threads
+						ns.exec(FILES[hType], host[1], threads, target);
+						hackSecurity = hackSLChange * threads;
 					}
 				}
 			}
@@ -355,7 +363,7 @@ export async function main(ns: NS): Promise<void> {
 					return Math.floor(fRam() / cost);
 				}
 				/** The optimal number of `grow()` threads to maximize money before any `hack()`s complete */
-				const growThreads = Math.ceil(ns.growthAnalyze(target, growthAmount, cores))
+				const growThreads = Math.ceil(ns.growthAnalyze(target, growthAmount, cores));
 				if (growThreads >= remainingThreads(HType.Grow)) {
 					resetShare();
 					ns.exec(FILES[HType.Grow], host[1], remainingThreads(HType.Grow), target);
@@ -393,7 +401,7 @@ export async function main(ns: NS): Promise<void> {
 	/** @param {number} d the maximum proportion (denominator) of money to spend */
 	async function hnManager(d: number) {
 		if (checkM(ns.hacknet.getPurchaseNodeCost(), d)) {
-			ns.hacknet.purchaseNode()
+			ns.hacknet.purchaseNode();
 		}
 		for (let i = 0; i < ns.hacknet.numNodes(); i++) {
 			for (const part of ["Level", "Ram", "Core"]) {
@@ -415,39 +423,48 @@ export async function main(ns: NS): Promise<void> {
 			ram *= 2;
 		}
 		function buyServer(r: number) {
-			const GIGA = 1000000000
-			ns.purchaseServer("SERVER-" + ns.nFormat(r * GIGA, "0.0b"), r)
+			const GIGA = 1000000000;
+			ns.purchaseServer("SERVER-" + ns.nFormat(r * GIGA, "0.0b"), r);
 		}
 		if (ns.getPurchasedServers().length < ns.getPurchasedServerLimit() && ram > 0) {
-			buyServer(ram)
+			buyServer(ram);
 		}
 		for (let i = ns.getPurchasedServers().length - 1; i >= 0; i--) {
-			const tmp = ns.getPurchasedServers()[i]
+			const tmp = ns.getPurchasedServers()[i];
 			if (info("MR", tmp) < ram && checkM(ns.getPurchasedServerCost(ram), d) && !EXCLUDE.includes(tmp)) {
-				ns.killall(tmp); ns.deleteServer(tmp); buyServer(ram);
+				ns.killall(tmp);
+				ns.deleteServer(tmp);
+				buyServer(ram);
 			}
 		}
 	}
 	// MODULES ABOVE HERE
-	ns.tail()
-	let i = 0
+	ns.tail();
+	let i = 0;
 	/** Keeps everything running once per `PERIOD` second(s) */
 	while (true) {
-		servers = []; targets = []; hosts = [[Math.max(info("MR", HOME) - KEEP_FREE, 0), HOME]]; exes = []
-		act = {}
-		await scanExes()
-		await scanServers("", HOME)
-		await hackAll()
-		if (netManager) { await hnManager(HACKNET_MONEY_PROPORTION) }
-		if (serverManager) { await pServerManager(PSERV_MONEY_PROPORTION) }
+		servers = [];
+		targets = [];
+		exes = [];
+		hosts = [[Math.max(info("MR", HOME) - KEEP_FREE, 0), HOME]];
+		act = {};
+		await scanExes();
+		await scanServers("", HOME);
+		await hackAll();
+		if (netManager) {
+			await hnManager(HACKNET_MONEY_PROPORTION);
+		}
+		if (serverManager) {
+			await pServerManager(PSERV_MONEY_PROPORTION);
+		}
 		if (ADDITIONAL_SCRIPTS && (i++ >= ADDITIONAL_SCRIPTS_PERIOD / PERIOD)) {
 			try {
-				ADDITIONAL_SCRIPTS.map((script) => ns.run(script))
+				ADDITIONAL_SCRIPTS.map((script) => ns.run(script));
 			} catch { }
 			i = 0;
 		}
-		log()
-		const MILLIS_PER_SECOND = 1000.0
-		await ns.sleep(PERIOD * MILLIS_PER_SECOND)
+		log();
+		const MILLIS_PER_SECOND = 1000.0;
+		await ns.sleep(PERIOD * MILLIS_PER_SECOND);
 	}
 }
