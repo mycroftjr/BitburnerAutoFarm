@@ -26,7 +26,7 @@ export async function main(ns) {
     /** Servers names that won't be used as hosts or get deleted */
     const EXCLUDE = [""];
     /** The percent of maxmium money under which we'll `grow()` instead of `hack()`ing */
-    const GROW_THRESHOLD = 0.8;
+    const GROW_THRESHOLD = 0.99;
     /** The amount of security levels above the minimum after which we'll only `weaken()` */
     const MAX_SECURITY = 5.0;
     /** The maximum percent of money to `hack()` out of a server */
@@ -51,6 +51,14 @@ export async function main(ns) {
     const ADDITIONAL_SCRIPTS_PERIOD = 60.0;
     /** CONFIG END */
     
+    /** @param {string} msg The error message to show */
+    function error(msg) {
+        return ns.args ? ns.tprint(msg) : ns.toast(msg, "error", null);
+    }
+    /** @param {string} msg The warning message to show */
+    function warn(msg) {
+        return ns.args ? ns.tprint(msg) : ns.toast(msg, "warning", null); 
+    }
     
     /** CONFIG VALIDATION START */
     /** A number that displays in a small number of characters, such as 1m */
@@ -65,15 +73,15 @@ export async function main(ns) {
     printServerLine("X", "".padEnd(MIN_SERVER_CHARACTERS), 0, SHORT_NUMBER);
     const MIN_OUTPUT_CHARS = Math.min(lengthOfLastLog(), "║ EXE 5/5 ║ HOSTS 69 ║ TARGETS 25 ║".length);
     if (OUTPUT_WIDTH < MIN_OUTPUT_CHARS) {
-        ns.toast("You must increase OUTPUT_WIDTH and/or decrease MIN_SERVER_CHARACTERS by "
-            + `${MIN_OUTPUT_CHARS - OUTPUT_WIDTH} to make lines fit!`, "error", null);
+        error("You must increase OUTPUT_WIDTH and/or decrease MIN_SERVER_CHARACTERS by "
+            + `${MIN_OUTPUT_CHARS - OUTPUT_WIDTH} to make lines fit!`);
     } else {
         // print the longest server line that could ever be printed
         printServerLine("X", "".padEnd(MIN_SERVER_CHARACTERS), LONG_NUMBER, LONG_NUMBER);
         const MAX_OUTPUT_CHARS = lengthOfLastLog();
         if (OUTPUT_WIDTH < MAX_OUTPUT_CHARS) {
-            ns.toast("funky UI stuff may occur unless you increase OUTPUT_WIDTH or decrease "
-                + `MIN_SERVER_CHARACTERS by ${MAX_OUTPUT_CHARS - OUTPUT_WIDTH}`, "warning", null);
+            warn("funky UI stuff may occur unless you increase OUTPUT_WIDTH or decrease "
+                + `MIN_SERVER_CHARACTERS by ${MAX_OUTPUT_CHARS - OUTPUT_WIDTH}`);
         }
     }
     
@@ -82,7 +90,7 @@ export async function main(ns) {
         ns.print("");
     }
     if (ns.getScriptLogs().length < MAX_LINES) {
-        ns.toast("MAX_LINES is set higher than the number of log lines configured in your global Bitburner settings!", "error", null);
+        error("MAX_LINES is set higher than the number of log lines configured in your global Bitburner settings!");
     }
     
     if (Math.log2(PSERV_MIN_RAM) % 1 !== 0) {
@@ -90,13 +98,39 @@ export async function main(ns) {
     }
     /** CONFIG VALIDATION END */
     
+    /** COMMAND LINE PROCESSING */
+    let netManager = false;
+    let serverManager = false;
+    if (ns.args.length) {
+        if (ns.args.includes("help") || ns.args.includes("?")) {
+            ns.tprint("arguments: which managers you want enabled.", "\nSupply 'hn' for the hacknet manager, and/or 'ps' for the player server manager.", "\nFor neither, please supply 'no'.");
+            ns.exit();
+        }
+        const unknownArgs = [];
+        for (const arg of ns.args) {
+            if (arg === "hn") {
+                netManager = true;
+            } else if (arg === "ps") {
+                serverManager = true;
+            } else if (arg !== "no") {
+                unknownArgs.push(arg);
+            }
+        }
+        if (unknownArgs.length) {
+            error("Did not understand arguments [" + unknownArgs.join(", ") + "]!");
+        }
+    } else {
+        netManager = await ns.prompt("Activate Hacknet Manager?");
+        serverManager = await ns.prompt("Activate Player Server Manager?");
+    }
+    
     /** Enum for the hack types.
      * @enum {number} */
     const HType = Object.freeze({
         Grow: 0,
         Weaken: 1,
         Hack: 2,
-        Share: 3
+        Share: 3,
     });
     /** The letters to use to display the hacking type currently being done to a given server */
     const LETTERS = ["G", "W", "H"];  // the main action should never be Share
@@ -133,8 +167,6 @@ export async function main(ns) {
      * @dict
      * @type {Object.<string, string>} */
     let act;
-    let netManager = false;
-    let serverManager = false;
     /** @type {[number, ...string[]]} */
     // https://www.compart.com/en/unicode/block/U+2580
     // const cycle = [1, "▄", "▌", "▀", "▐"];
@@ -169,7 +201,7 @@ export async function main(ns) {
     
     /** @modifies {exes} */
     async function scanExes() {
-        for (const exe of ["brutessh", "ftpcrack", "relaysmtp", "sqlinject", "httpworm"]) {
+        for (const exe of ["brutessh", "ftpcrack", "relaysmtp", "httpworm", "sqlinject"]) {
             if (ns.fileExists(exe + ".exe")) {
                 exes.push(exe);
             }
@@ -396,7 +428,6 @@ export async function main(ns) {
         }
     }
     // MODULES BELOW HERE
-    netManager = await ns.prompt("Activate Hacknet Manager?");
     /** @param {number} d the maximum proportion (denominator) of money to spend */
     async function hnManager(d) {
         if (checkM(ns.hacknet.getPurchaseNodeCost(), d)) {
@@ -410,7 +441,6 @@ export async function main(ns) {
             }
         }
     }
-    serverManager = await ns.prompt("Activate Player Server Manager?");
     /** @param {number} d the maximum proportion (denominator) of money to spend */
     async function pServerManager(d) {
         let ram = PSERV_MIN_RAM;
