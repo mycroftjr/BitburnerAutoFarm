@@ -149,13 +149,13 @@ export async function main(ns: NS): Promise<void> {
                 // The next important faction is a company faction we're not in. Work the company.
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 const [, company, repNeeded, hackingLevelNeeded] = COMPANY_LOOKUP.get(faction)!;
-                if (!working && ns.getPlayer().hacking >= hackingLevelNeeded) {
+                if (!working && ns.getPlayer().hacking >= hackingLevelNeeded && ns.singularity.getCompanyRep(company) < repNeeded) {
                     // can't use ns.isRunning() as job can't always be predicted
                     if (ns.scriptRunning("/sing/workForCompany.js", ns.getHostname())) {
                         working = true;
                     } else {  // run it
                         if (ns.getPlayer().jobs.length) {
-                            ns.singularity.quitJob();
+                            ns.singularity.quitJob(company);
                         }
                         for (const job of JOB_PRIOS) {
                             if (ns.singularity.applyToCompany(company, job)) {
