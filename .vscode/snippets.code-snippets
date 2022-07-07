@@ -3,10 +3,11 @@
     "scope": "typescript",
     "prefix": "template",
     "body": [
-      "import { NS } from \"@ns\";",
+      "import type { NS } from \"@ns\";",
+      "import type { DeepReadonly } from \"ts-essentials\";",
       "",
       "/** @param {NS} ns */",
-      "export async function main(ns: NS): Promise<void> {",
+      "export async function main(ns: DeepReadonly<NS>): Promise<void> {",
       "\t//",
       "}"
     ]

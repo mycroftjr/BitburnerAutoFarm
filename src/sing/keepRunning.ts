@@ -1,12 +1,13 @@
-import { NS } from "@ns";
+import type { NS } from "@ns";
+import type { DeepReadonly } from "ts-essentials";
 
 /** @param {NS} ns */
-export async function main(ns: NS): Promise<void> {
+export function main(ns: DeepReadonly<NS>) {
     type MappedExtract<T, U> = {
         [K in keyof T]: Extract<T[K], U>
     };
     /** @type {[string | number][]} */
-    const KEEP_RUNNING: MappedExtract<Parameters<typeof ns.run>, string | number>[] = [
+    const KEEP_RUNNING: MappedExtract<Parameters<typeof ns.run>, number | string>[] = [
         ["watcher.js"],
         ["autoFarm.js", 1, "ps"],
         ["stockBot.js"],

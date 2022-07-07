@@ -1,52 +1,61 @@
-import { NS } from "@ns";
+import type { NS } from "@ns";
+import type { DeepReadonly } from "ts-essentials";
+import { parseConfig } from "configHelper";
 
 /** @param {NS} ns */
-export async function main(ns: NS): Promise<void> {
-    /** CONFIGURABLE VARS START */
-    const FACTION_BLACKLIST = ["Netburners", "CyberSec"];
-    // Whether to accept all faction invitations from factions you still need augments from. May cause problems with "enemy" factions.
-    const ACCEPT_ALL_INVITATIONS = false;
-    /** A list of [Faction Name, Notable Augments] to join/get augments from, in the order they should be worked on.
-     * @type {string[][]} */
-    const FACTION_PRIOS = [
-        ["Daedalus", "The Red Pill"],
-        ["Illuminati", "QLink"],  // +75% hacking, +100% all speeds, +150% hacking chance, +300% hacking power
-        ["Sector-12", "CashRoot Starter Kit"],  // start with $1m and BruteSSH
-        ["Tian Di Hui", "Neuroreceptor Management Implant"],  // removes penalty for not focusing
-        ["NiteSec", "Neural-Retention Enhancement", "CRTX42-AA Gene Modification"],  // +25% hacking EXP; +8% hacking & +15% hacking EXP
-        ["BitRunners", "BitRunners Neurolink", "Neural Accelerator"],  // start with FTPCrack and relaySMTP; +10% hacking & +15% hacking EXP
-        ["Aevum", "PCMatrix"],  // start with AutoLink and DeepscanV1
-        ["Chongqing", "Neuregen Gene Modification"],  // +40% hacking EXP
-        ["The Black Hand", "The Black Hand"],  // +10% hacking, +2% all speed, +10% hacking power, +15% str & dex
-        ["Bachman & Associates", "Smart Jaw", "ADR-V2 Pheromone Gene"],  // +25% all rep; +20% all rep
-        [
-            "Fulcrum Secret Technologies",
-            "PC Direct-Neural Interface NeuroNet Injector",  // +10% hacking, +5% all speeds, +100% company rep
-            "PC Direct-Neural Interface Optimization Submodule",  // +10% hacking, +75% company rep
-            "Graphene Bionic Spine Upgrade"  // +60% combat
+export async function main(ns: DeepReadonly<NS>): Promise<void> {
+    // The location of the config file that the user should edit.
+    const CONFIG_FILE = "/sing/activitiesConfig.txt";
+    const DEFAULT_CONFIG = {
+        // the minimum number of augments queued/available for purchase to consider going for the "have 40 augments queued" achievement
+        MIN_AUGS_TO_CONSIDER_ACHIEVO: 30,
+        FACTION_BLACKLIST: ["Netburners", "CyberSec"],
+        // Whether to accept all faction invitations from factions you still need augments from. May cause problems with "enemy" factions.
+        ACCEPT_ALL_INVITATIONS: false,
+        /** A list of [Faction Name, Notable Augments] to join/get augments from, in the order they should be worked on.
+         * @type {string[][]} */
+        FACTION_PRIOS: [
+            ["Daedalus", "The Red Pill"],
+            ["Illuminati", "QLink"],  // +75% hacking, +100% all speeds, +150% hacking chance, +300% hacking power
+            ["Sector-12", "CashRoot Starter Kit"],  // start with $1m and BruteSSH
+            ["Tian Di Hui", "Neuroreceptor Management Implant"],  // removes penalty for not focusing
+            ["NiteSec", "Neural-Retention Enhancement", "CRTX42-AA Gene Modification"],  // +25% hacking EXP; +8% hacking & +15% hacking EXP
+            ["BitRunners", "BitRunners Neurolink", "Neural Accelerator"],  // start with FTPCrack and relaySMTP; +10% hacking & +15% hacking EXP
+            ["Aevum", "PCMatrix"],  // start with AutoLink and DeepscanV1
+            ["Chongqing", "Neuregen Gene Modification"],  // +40% hacking EXP
+            ["The Black Hand", "The Black Hand"],  // +10% hacking, +2% all speed, +10% hacking power, +15% str & dex
+            ["Bachman & Associates", "Smart Jaw", "ADR-V2 Pheromone Gene"],  // +25% all rep; +20% all rep
+            [
+                "Fulcrum Secret Technologies",
+                "PC Direct-Neural Interface NeuroNet Injector",  // +10% hacking, +5% all speeds, +100% company rep
+                "PC Direct-Neural Interface Optimization Submodule",  // +10% hacking, +75% company rep
+                "Graphene Bionic Spine Upgrade"  // +60% combat
+            ],
+            ["Four Sigma", "PC Direct-Neural Interface", "Neurotrainer III"],  // +30% comp rep; +20% all EXP
+            ["Clarke Incorporated", "Neuronal Densification", "nextSENS Gene Modification"],  // +15% hacking, +10% hacking EXP, +3% hacking speed; +20% all skills
+            ["NWO", "Xanipher", "Power Recirculation Core"],  // +20% all skills, +15% all EXP; +5% all skills, +10% all EXP
+            ["OmniTek Incorporated", "OmniTek InfoLoad"],  // +20% hacking, +25% hacking EXP; Bionic Legs & Spine prereqs for Fulcrum augs
+            ["The Covenant", "SPTN-97 Gene Modification"],  // +15% hacking, +75% combat
+            // BN ?: ["Church of the Machine God", "Stanek's Gift - Genesis"],
         ],
-        ["Four Sigma", "PC Direct-Neural Interface", "Neurotrainer III"],  // +30% comp rep; +20% all EXP
-        ["Clarke Incorporated", "Neuronal Densification", "nextSENS Gene Modification"],  // +15% hacking, +10% hacking EXP, +3% hacking speed; +20% all skills
-        ["NWO", "Xanipher", "Power Recirculation Core"],  // +20% all skills, +15% all EXP; +5% all skills, +10% all EXP
-        ["OmniTek Incorporated", "OmniTek InfoLoad"],  // +20% hacking, +25% hacking EXP; Bionic Legs & Spine prereqs for Fulcrum augs
-        ["The Covenant", "SPTN-97 Gene Modification"],  // +15% hacking, +75% combat
-        // BN ?: ["Church of the Machine God", "Stanek's Gift - Genesis"],
-    ];
-    /* eslint-disable @typescript-eslint/no-unused-vars */
-    // currently unused:
-    /** @type {string[][]} */
-    const FACTION_PRIOS_CRIME = [
-        ["Ishima", "INFRARET Enhancement"],  // +10% dex, +10% crime$, +25% crime chance
-    ];
-    /** @type {string[][]} */
-    const FACTION_PRIOS_COMBAT = [
-        ["The Covenant", "SPTN-97 Gene Modification"],  // +15% hacking, +75% combat
-        ["MegaCorp", "CordiARC Fusion Reactor"],  // +35% combat & combat EXP
-        ["New Tokyo", "NutriGen Implant"],  // +20% combat EXP
-        ["Volhaven", "DermaForce Particle Barrier"],  // +40% defense
-    ];
-    /* eslint-enable @typescript-eslint/no-unused-vars */
-    /** CONFIGURABLE VARS END */
+        // currently unused:
+        /** @type {string[][]} */
+        FACTION_PRIOS_CRIME: [
+            ["Ishima", "INFRARET Enhancement"],  // +10% dex, +10% crime$, +25% crime chance
+        ],
+        /** @type {string[][]} */
+        FACTION_PRIOS_COMBAT: [
+            ["The Covenant", "SPTN-97 Gene Modification"],  // +15% hacking, +75% combat
+            ["MegaCorp", "CordiARC Fusion Reactor"],  // +35% combat & combat EXP
+            ["New Tokyo", "NutriGen Implant"],  // +20% combat EXP
+            ["Volhaven", "DermaForce Particle Barrier"],  // +40% defense
+        ],
+    };
+    /** END OF CONFIGURABLE VALUES */
+    const config = await parseConfig(ns, CONFIG_FILE, DEFAULT_CONFIG);
+
+    // the number of augments to be queued at once to get the achievement
+    const MIN_AUGS_FOR_ACHIEVO = 40;
 
     /** Augmentations offered by every faction */
     const COMMON_AUGS = ["NeuroFlux Governor"];
@@ -85,8 +94,9 @@ export async function main(ns: NS): Promise<void> {
     ]);
     const JOB_PRIOS = ["software", "software consultant", "it", "security engineer", "network engineer", "business", "business consultant", "security", "agent", "employee"];
 
-    function assert(cond: unknown, ...msg: Parameters<typeof ns.tprint>) {
+    function assert(cond: unknown, ...msg: DeepReadonly<Parameters<typeof ns.tprint>>) {
         if (!cond) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             ns.tprint(...msg);
         }
     }
@@ -103,7 +113,7 @@ export async function main(ns: NS): Promise<void> {
      * @type {Map<string, number>} */
     let factionData: Map<string, number>;
     if (ns.fileExists("/sing/factionData.txt")) {
-        factionData = new Map<string, number>(JSON.parse(ns.read("/sing/factionData.txt")));
+        factionData = new Map<string, number>(JSON.parse(ns.read("/sing/factionData.txt") as string) as Iterable<readonly [string, number]>);
     } else {
         factionData = new Map<string, number>();
     }
@@ -136,7 +146,7 @@ export async function main(ns: NS): Promise<void> {
 
     let working = false;
     let awaitingCityFactionInvite = false;
-    for (const [faction, ] of FACTION_PRIOS) {
+    for (const [faction, ] of config.FACTION_PRIOS) {
         ns.print(faction);
         const augs = getUnownedAugs(faction);
         factionData.set(faction, augs.length - COMMON_AUGS.length);
@@ -154,9 +164,7 @@ export async function main(ns: NS): Promise<void> {
                     if (ns.scriptRunning("/sing/workForCompany.js", ns.getHostname())) {
                         working = true;
                     } else {  // run it
-                        if (ns.getPlayer().jobs.length) {
-                            ns.singularity.quitJob(company);
-                        }
+                        ns.singularity.quitJob(company);
                         for (const job of JOB_PRIOS) {
                             if (ns.singularity.applyToCompany(company, job)) {
                                 ns.scriptKill("/sing/workForFaction.js", ns.getHostname());
@@ -194,6 +202,7 @@ export async function main(ns: NS): Promise<void> {
         for (const aug of augs) {
             if (COMMON_AUGS.includes(aug)) continue;
             const repNeeded = ns.singularity.getAugmentationRepReq(aug);
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             if (!working && ns.singularity.getFactionRep(faction) < repNeeded) {
                 if (ns.isRunning("/sing/workForFaction.js", ns.getHostname(), faction, repNeeded)) {
                     working = true;
@@ -219,9 +228,9 @@ export async function main(ns: NS): Promise<void> {
         ns.scriptKill("/sing/workForFaction.js", ns.getHostname());
     }
 
-    if (ACCEPT_ALL_INVITATIONS) {
+    if (config.ACCEPT_ALL_INVITATIONS) {
         for (const faction of ns.singularity.checkFactionInvitations()) {
-            if (FACTION_BLACKLIST.includes(faction)) continue;
+            if (config.FACTION_BLACKLIST.includes(faction)) continue;
             const numAugsNeeded = getUnownedAugs(faction).length - COMMON_AUGS.length;
             if (numAugsNeeded > 0) {
                 ns.singularity.joinFaction(faction);
@@ -234,14 +243,13 @@ export async function main(ns: NS): Promise<void> {
     }
     await ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
 
-    // eslint-disable-next-line no-constant-condition
-    if (forceInstall || !working) {
+    if (forceInstall || !working || augsToBuyMap.size > MIN_AUGS_FOR_ACHIEVO) {
         // If we aren't working towards any augmentations and have augs to buy/install, let's do so now
         for (const faction of ns.getPlayer().factions) {
             const augs = getUnownedAugs(faction);
             for (const aug of augs) {
                 assert(ns.singularity.getFactionRep(faction) >= ns.singularity.getAugmentationRepReq(aug) && haveOrCanBuyPrereqs(aug),
-                    "Found aug " + aug + " under faction " + faction + " that we don't have the reputation for, but aren't working towards!");
+                    `Found aug ${aug} under faction ${faction} that we don't have the reputation for, but aren't working towards!`);
                 const price = ns.singularity.getAugmentationPrice(aug);
                 if ((augsToBuyMap.get(aug)?.price ?? Infinity) > price) {
                     augsToBuyMap.set(aug, {price, faction});
@@ -261,12 +269,14 @@ export async function main(ns: NS): Promise<void> {
          * @param {[number, ...T[]][]} arr
          * @modifies {arr}
          * @template T */
+        // eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
         const sortAsc = <T>(arr: [number, ...T[]][]) => arr.sort((a, b) => a[0] - b[0]);
         sortAsc(augsToBuy);
 
         ns.print("augsToBuy: ", augsToBuy);
 
-        if (augsToBuy.length || (myAugs.length - ns.singularity.getOwnedAugmentations(false).length)) {
+        if ((augsToBuyMap.size < config.MIN_AUGS_TO_CONSIDER_ACHIEVO || augsToBuyMap.size >= MIN_AUGS_FOR_ACHIEVO)
+            && (augsToBuy.length || (myAugs.length - ns.singularity.getOwnedAugmentations(false).length))) {
             // Liquidate (sell) all stocks
             ns.scriptKill("stockBot.js", ns.getHostname());
             for (const sym of ns.stock.getSymbols()) {
@@ -310,8 +320,7 @@ export async function main(ns: NS): Promise<void> {
             for (const aug of COMMON_AUGS) {
                 const info = augsToBuyMap.get(aug);
                 if (!info) continue;
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                augsToBuy.push([info!.price, aug, info!.faction]);
+                augsToBuy.push([info.price, aug, info.faction]);
             }
             while (augsToBuy.length && (augsToBuy.at(-1)?.[0] ?? Infinity) < ns.getPlayer().money) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -330,7 +339,10 @@ export async function main(ns: NS): Promise<void> {
             }
             await ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
 
-            ns.singularity.installAugmentations("/sing/sing.js");
+            if (augsToBuyMap.size < config.MIN_AUGS_TO_CONSIDER_ACHIEVO
+                || bought.size - ns.singularity.getOwnedAugmentations(false).length >= MIN_AUGS_FOR_ACHIEVO) {
+                ns.singularity.installAugmentations("/sing/sing.js");
+            }
         }
     }
 

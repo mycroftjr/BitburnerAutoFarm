@@ -1,7 +1,8 @@
-import { NS } from "@ns";
+import type { NS } from "@ns";
+import type { DeepReadonly } from "ts-essentials";
 
 /** @param {NS} ns */
-export async function main(ns: NS): Promise<void> {
+export function main(ns: DeepReadonly<NS>) {
     const MAX_SF_LEVEL = 3;
     /* eslint-disable no-magic-numbers */
     const SOURCE_FILE_PRIORITY = [[4, 1], [1, MAX_SF_LEVEL], [5, MAX_SF_LEVEL], [4, MAX_SF_LEVEL], [3, 1], [6, 1], [7, 1], [9, MAX_SF_LEVEL], [2, 1], [10, MAX_SF_LEVEL],

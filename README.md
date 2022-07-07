@@ -1,4 +1,4 @@
-An updated version of PG SDVX's https://steamcommunity.com/sharedfiles/filedetails/?id=2686833015 for https://github.com/danielyxie/bitburner/.
+Began as an updated version of PG SDVX's https://steamcommunity.com/sharedfiles/filedetails/?id=2686833015 for https://github.com/danielyxie/bitburner/, which is still in dist/autoFarm.js. But the sing/ folder contains advanced automation scripts for after you "beat the game" once.
 
 Click on Raw in the upper-right of a .js file you want to use, then copy that URL and type `wget <url> <nameYouWantItAs>.js` into you in-game terminal.
 For example:

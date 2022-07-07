@@ -1,7 +1,8 @@
-import { NS } from "@ns";
+import type { NS } from "@ns";
+import type { DeepReadonly } from "ts-essentials";
 
 /** @param {NS} ns */
-export async function main(ns: NS): Promise<void> {
+export async function main(ns: DeepReadonly<NS>): Promise<void> {
     // TODO: remove restriction after achievo
     const BITNODE_1_MAX_RAM = 128;
     const BITNODE_1_MAX_CORES = 1;
@@ -9,7 +10,7 @@ export async function main(ns: NS): Promise<void> {
     ns.disableLog("sleep");
     /** async ns.run
      * @param {Parameters<typeof NS.run>} params */
-    async function aRun(...params: Parameters<typeof ns.run>) {
+    async function aRun(...params: DeepReadonly<Parameters<typeof ns.run>>) {
         const pid = ns.run(...params);
         if (pid === 0) return;
         while (ns.isRunning(pid, ns.getHostname())) {

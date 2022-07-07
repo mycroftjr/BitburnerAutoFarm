@@ -1,6 +1,6 @@
 
 /** @param {NS} ns */
-export async function main(ns) {
+export function main(ns) {
     /* eslint-disable no-magic-numbers */
     /** List of [Program Name, Hacking Level to Create, Money to Buy]
      * @type {[string, number, number][]} */

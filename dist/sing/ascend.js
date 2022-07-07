@@ -1,6 +1,6 @@
 
 /** @param {NS} ns */
-export async function main(ns) {
+export function main(ns) {
     const MAX_SF_LEVEL = 3;
     /* eslint-disable no-magic-numbers */
     const SOURCE_FILE_PRIORITY = [[4, 1], [1, MAX_SF_LEVEL], [5, MAX_SF_LEVEL], [4, MAX_SF_LEVEL], [3, 1], [6, 1], [7, 1], [9, MAX_SF_LEVEL], [2, 1], [10, MAX_SF_LEVEL],

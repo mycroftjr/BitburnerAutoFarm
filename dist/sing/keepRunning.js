@@ -1,6 +1,6 @@
 
 /** @param {NS} ns */
-export async function main(ns) {
+export function main(ns) {
     /** @type {[string | number][]} */
     const KEEP_RUNNING = [
         ["watcher.js"],

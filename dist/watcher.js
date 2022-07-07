@@ -2,14 +2,14 @@
 export async function main(ns) {
     const hashes = {};
     
-    const files = ns.ls('home', '.js');
+    const files = ns.ls("home", ".js");
     for (const file of files) {
         const contents = ns.read(file);
         hashes[file] = getHash(contents);
     }
     
     while (true) {
-        const files = ns.ls('home', '.js');
+        const files = ns.ls("home", ".js");
         
         for (const file of files) {
             const contents = ns.read(file);

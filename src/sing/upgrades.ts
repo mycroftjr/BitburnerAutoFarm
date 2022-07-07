@@ -1,7 +1,8 @@
-import { NS } from "@ns";
+import type { NS } from "@ns";
+import type { DeepReadonly } from "ts-essentials";
 
 /** @param {NS} ns */
-export async function main(ns: NS): Promise<void> {
+export function main(ns: DeepReadonly<NS>) {
     /* eslint-disable no-magic-numbers */
     /** List of [Program Name, Hacking Level to Create, Money to Buy] 
      * @type {[string, number, number][]} */

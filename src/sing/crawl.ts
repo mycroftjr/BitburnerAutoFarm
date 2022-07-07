@@ -1,7 +1,8 @@
-import { NS } from "@ns";
+import type { NS } from "@ns";
+import type { DeepReadonly } from "ts-essentials";
 
 /** @param {NS} ns */
-export async function main(ns: NS): Promise<void> {
+export async function main(ns: DeepReadonly<NS>): Promise<void> {
     const MILLIS_TO_WAIT_FOR_HACKING_LEVELS = 6e3;
     const SERVERS_OF_INTEREST = ["CSEC", "I.I.I.I", "avmnite-02h", "run4theh111z",
         "fulcrumassets",

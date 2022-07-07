@@ -1,3 +1,5 @@
+import type { DeepReadonly } from "ts-essentials";
+import { parseConfig } from "configHelper.js";
 /** 
  * Welcome to the Auto Farm part 2: Electric Boogaloo - Advanced Edition!
  * This script is a little more complicated to explain easily, it dedicates high RAM servers to attack high profit servers.
@@ -6,58 +8,59 @@
  * Originally by PG SDVX, https://steamcommunity.com/sharedfiles/filedetails/?id=2686833015
  * Edits by MycroftJr
  * @param {NS} ns */
-export async function main(ns: NS): Promise<void> {
+export async function main(ns: DeepReadonly<NS>): Promise<void> {
 	ns.disableLog("ALL");
-
-	/** CONFIG START (lay users should feel safe editting these values!) */
-	// UI parameters
-	/** The maximum total number of lines to display */
-	const MAX_LINES = 51;
-	/** The minimum number of characters to display for each server name */
-	const MIN_SERVER_CHARACTERS = 15;
-	/** The number of high-profit targets to display */
-	const NUM_HIGH_PROFIT_TARGS = 12;
-	/** The fixed width in characters of the UI */
-	const OUTPUT_WIDTH = 43;
-	/** Whether to print lower-profit targets (using the remaining output lines) at the bottom of the UI */
-	const PRINT_LOWER_PROFITS = false;
-
-	// Logic parameters
-	/** Servers names that won't be used as hosts or get deleted */
-	const EXCLUDE = [""];
-	/** The percent of maxmium money under which we'll `grow()` instead of `hack()`ing */
-	const GROW_THRESHOLD = 0.99;
-	/** The amount of security levels above the minimum after which we'll only `weaken()` */
-	const MAX_SECURITY = 5.0;
-	/** The maximum percent of money to `hack()` out of a server */
-	const MAX_DRAIN = 0.7;
-	/** The maximum 'minimum security level' of a server to even consider targetting */
-	const MAX_MSL = 100;
-	/** The amount of RAM to keep free on the host running this script, not including this script's direct usage */
-	const KEEP_FREE = 50;
-	/** Whether to `share()` your remaining RAM with your factions, boosting hacking contracts */
-	const SHARE_REMAINING_RAM = true;
-	/** The max proportion (denominator) of money to spend on any Hacknet node/upgrade */
-	const HACKNET_MONEY_PROPORTION = 20;
-	/** The max proportion (denominator) of money to spend on any Purchased Server */
-	const PSERV_MONEY_PROPORTION = 20;
-	/** The minimum amount of RAM to automate purchasing */
-	const PSERV_MIN_RAM = 8;
-	/** How often, in seconds, to check/run anything */
-	const PERIOD = 1.0;
-	/** A list of additional scripts to try to run, if any */
-	const ADDITIONAL_SCRIPTS = ["autoSolver.js"];
-	/** How often, in seconds, to try to run the `ADDITIONAL_SCRIPTS` */
-	const ADDITIONAL_SCRIPTS_PERIOD = 60.0;
-	/** CONFIG END */
+	// The location of the config file that the user should edit.
+	const CONFIG_FILE = "autoFarmConfig.txt";
+	const DEFAULT_CONFIG = {
+		// UI parameters
+		/** The maximum total number of lines to display */
+		MAX_LINES: 51,
+		/** The minimum number of characters to display for each server name */
+		MIN_SERVER_CHARACTERS: 15,
+		/** The number of high-profit targets to display */
+		NUM_HIGH_PROFIT_TARGS: 12,
+		/** The fixed width in characters of the UI */
+		OUTPUT_WIDTH: 43,
+		/** Whether to print lower-profit targets (using the remaining output lines) at the bottom of the UI */
+		PRINT_LOWER_PROFITS: false,
+		// Logic parameters
+		/** Servers names that won't be used as hosts or get deleted */
+		EXCLUDE: [""],
+		/** The percent of maxmium money under which we'll `grow()` instead of `hack()`ing */
+		GROW_THRESHOLD: 0.99,
+		/** The amount of security levels above the minimum after which we'll only `weaken()` */
+		MAX_SECURITY: 5.0,
+		/** The maximum percent of money to `hack()` out of a server */
+		MAX_DRAIN: 0.7,
+		/** The maximum 'minimum security level' of a server to even consider targetting */
+		MAX_MSL: 100,
+		/** The amount of RAM to keep free on the host running this script, not including this script's direct usage */
+		KEEP_FREE: 50,
+		/** Whether to `share()` your remaining RAM with your factions, boosting hacking contracts */
+		SHARE_REMAINING_RAM: true,
+		/** The max proportion (denominator) of money to spend on any Hacknet node/upgrade */
+		HACKNET_MONEY_PROPORTION: 20,
+		/** The max proportion (denominator) of money to spend on any Purchased Server */
+		PSERV_MONEY_PROPORTION: 20,
+		/** The minimum amount of RAM to automate purchasing */
+		PSERV_MIN_RAM: 8,
+		/** How often, in seconds, to check/run anything */
+		PERIOD: 1.0,
+		/** A list of additional scripts to try to run, if any */
+		ADDITIONAL_SCRIPTS: ["autoSolver.js"],
+		/** How often, in seconds, to try to run the `ADDITIONAL_SCRIPTS` */
+		ADDITIONAL_SCRIPTS_PERIOD: 60.0,
+	};
+	const config = await parseConfig(ns, CONFIG_FILE, DEFAULT_CONFIG);
 
 	/** @param {string} msg The error message to show */
 	function error(msg: string) {
-		return ns.args ? ns.tprint(msg) : ns.toast(msg, "error", null);
+		return ns.args.length ? void ns.tprint(msg) : void ns.toast(msg, "error", null);
 	}
 	/** @param {string} msg The warning message to show */
 	function warn(msg: string) {
-		return ns.args ? ns.tprint(msg) : ns.toast(msg, "warning", null);  
+		return ns.args.length ? void ns.tprint(msg) : void ns.toast(msg, "warning", null);
 	}
 
 	/** CONFIG VALIDATION START */
@@ -70,31 +73,31 @@ export async function main(ns: NS): Promise<void> {
 		return logs[logs.length-1].length;
 	}
 	// print the shortest server line that would ever be printed
-	printServerLine("X", "".padEnd(MIN_SERVER_CHARACTERS), 0, SHORT_NUMBER);
+	printServerLine("X", "".padEnd(config.MIN_SERVER_CHARACTERS), 0, SHORT_NUMBER);
 	const MIN_OUTPUT_CHARS = Math.min(lengthOfLastLog(), "║ EXE 5/5 ║ HOSTS 69 ║ TARGETS 25 ║".length);
-	if (OUTPUT_WIDTH < MIN_OUTPUT_CHARS) {
+	if (config.OUTPUT_WIDTH < MIN_OUTPUT_CHARS) {
 		error("You must increase OUTPUT_WIDTH and/or decrease MIN_SERVER_CHARACTERS by "
-			+ `${MIN_OUTPUT_CHARS - OUTPUT_WIDTH} to make lines fit!`);
+			+ `${MIN_OUTPUT_CHARS - config.OUTPUT_WIDTH} to make lines fit!`);
 	} else {
 		// print the longest server line that could ever be printed
-		printServerLine("X", "".padEnd(MIN_SERVER_CHARACTERS), LONG_NUMBER, LONG_NUMBER);
+		printServerLine("X", "".padEnd(config.MIN_SERVER_CHARACTERS), LONG_NUMBER, LONG_NUMBER);
 		const MAX_OUTPUT_CHARS = lengthOfLastLog();
-		if (OUTPUT_WIDTH < MAX_OUTPUT_CHARS) {
+		if (config.OUTPUT_WIDTH < MAX_OUTPUT_CHARS) {
 			warn("funky UI stuff may occur unless you increase OUTPUT_WIDTH or decrease "
-				+ `MIN_SERVER_CHARACTERS by ${MAX_OUTPUT_CHARS - OUTPUT_WIDTH}`);
+				+ `MIN_SERVER_CHARACTERS by ${MAX_OUTPUT_CHARS - config.OUTPUT_WIDTH}`);
 		}
 	}
 
 	ns.clearLog();
-	for (let i = 0; i < MAX_LINES+2; ++i) {
+	for (let i = 0; i < config.MAX_LINES+2; ++i) {
 		ns.print("");
 	}
-	if (ns.getScriptLogs().length < MAX_LINES) {
+	if (ns.getScriptLogs().length < config.MAX_LINES) {
 		error("MAX_LINES is set higher than the number of log lines configured in your global Bitburner settings!");
 	}
 
-	if (Math.log2(PSERV_MIN_RAM) % 1 !== 0) {
-		throw Error(`PSERV_MIN_RAM must be a power of 2 (is ${PSERV_MIN_RAM})!`);
+	if (Math.log2(config.PSERV_MIN_RAM) % 1 !== 0) {
+		throw Error(`PSERV_MIN_RAM must be a power of 2 (is ${config.PSERV_MIN_RAM})!`);
 	}
 	/** CONFIG VALIDATION END */
 
@@ -182,6 +185,7 @@ export async function main(ns: NS): Promise<void> {
 	/** @param {[number,T][]} arr
 	 * @modifies {arr}
 	 * @template T */
+	// eslint-disable-next-line @typescript-eslint/prefer-readonly-parameter-types
 	const arraySort = <T>(arr: [number, T][]) => arr.sort((a, b) => b[0] - a[0]);
 	/** @param {string} t The type of info to get; an acronym of
 	 * MaxMoney, MoneyAvailable, MaxRam, UsedRam, NumPortsRequired,
@@ -202,7 +206,7 @@ export async function main(ns: NS): Promise<void> {
 	}
 
 	/** @modifies {exes} */
-	async function scanExes() {
+	function scanExes() {
 		for (const exe of ["brutessh", "ftpcrack", "relaysmtp", "httpworm", "sqlinject"]) {
 			if (ns.fileExists(exe + ".exe")) {
 				exes.push(exe);
@@ -213,10 +217,10 @@ export async function main(ns: NS): Promise<void> {
 	/** Truncates the given server name for display 
 	 * @param {string} s */
 	function str(s: string) {
-		if (s.length <= MIN_SERVER_CHARACTERS + 1) {
+		if (s.length <= config.MIN_SERVER_CHARACTERS + 1) {
 			return s;
 		}
-		return s.substring(0, MIN_SERVER_CHARACTERS) + "…";
+		return s.substring(0, config.MIN_SERVER_CHARACTERS) + "…";
 	}
 
 	/** Prints a server status line.
@@ -233,7 +237,7 @@ export async function main(ns: NS): Promise<void> {
 	 * @param {string} str 
 	 * @param {string} pad */
 	function pprint(prefix: string, pad: string, str: string) {
-		ns.print(prefix, str.padStart(OUTPUT_WIDTH - prefix.length, pad));
+		ns.print(prefix, str.padStart(config.OUTPUT_WIDTH - prefix.length, pad));
 	}
 
 	function log() {
@@ -243,7 +247,7 @@ export async function main(ns: NS): Promise<void> {
 		ns.clearLog();
 		// https://www.compart.com/en/unicode/block/U+2500
 		pprint("╔═══╦", "═", "╗");
-		const tmp = targets.slice(0, NUM_HIGH_PROFIT_TARGS);
+		const tmp = targets.slice(0, config.NUM_HIGH_PROFIT_TARGS);
 		pprint(`║ ${cycle[cycle[0]]} ║ HIGH PROFIT`, " ", "BALANCE     ║");
 		for (const t of tmp) {
 			printServerLine(act[t[1]], str(t[1]), info("MA", t[1]), info("MM", t[1]));
@@ -255,23 +259,23 @@ export async function main(ns: NS): Promise<void> {
 			pprint("╠", "═", "╣");
 			let tmp = "║ MANAGERS";
 			if (netManager) {
-				tmp += " ║ HN-Nodes " + ns.hacknet.numNodes();
+				tmp += ` ║ HN-Nodes ${ns.hacknet.numNodes()}`;
 			}
 			if (serverManager) {
-				tmp += " ║ P-Servers " + ns.getPurchasedServers().length;
+				tmp += ` ║ P-Servers ${ns.getPurchasedServers().length}`;
 			}
 			pprint(tmp, " ", "║");
 		}
 
-		if (SHARE_REMAINING_RAM) {
+		if (config.SHARE_REMAINING_RAM) {
 			pprint("╠", "═", "╣");
 			pprint(`║ SHARE POWER ${ns.getSharePower()}`, " ", "║");
 		}
 
-		if (PRINT_LOWER_PROFITS) {
+		if (config.PRINT_LOWER_PROFITS) {
 			pprint("╠═══╦", "═", "╣");
 			pprint(`║ ${cycle[cycle[0]]} ║ LOWER PROFIT`, " ", "BALANCE     ║");
-			const tmp = targets.slice(NUM_HIGH_PROFIT_TARGS, MAX_LINES - ns.getScriptLogs().length);
+			const tmp = targets.slice(config.NUM_HIGH_PROFIT_TARGS, config.MAX_LINES - ns.getScriptLogs().length);
 			for (const t of tmp) {
 				printServerLine(act[t[1]], str(t[1]), info("MA", t[1]), info("MM", t[1]));
 			}
@@ -293,10 +297,10 @@ export async function main(ns: NS): Promise<void> {
 					}
 					ns.nuke(server);
 				}
-				if (info("MM", server) > 0 && info("RHL", server) <= ns.getHackingLevel() && info("MSL", server) < MAX_MSL) {
+				if (info("MM", server) > 0 && info("RHL", server) <= ns.getHackingLevel() && info("MSL", server) < config.MAX_MSL) {
 					targets.push([Math.floor(info("MM", server) / info("MSL", server)), server]);
 				}
-				if (info("MR", server) > ACT_COST && !EXCLUDE.includes(server)) {
+				if (info("MR", server) > ACT_COST && !config.EXCLUDE.includes(server)) {
 					hosts.push([info("MR", server), server]);
 				}
 				servers.push(server);
@@ -313,7 +317,7 @@ export async function main(ns: NS): Promise<void> {
 
 	/** Organizes the hacking, dedicating high RAM servers to target high value ones
 	 * @modifies {act} */
-	async function hackAll() {
+	function hackAll() {
 		/** An index into `targets` */
 		let tarIndex = 0;
 		/** `false` iff this is our first go through `targets` */
@@ -351,9 +355,9 @@ export async function main(ns: NS): Promise<void> {
 			/** The main action we will perform on the target server
 			 * @type {HType} */
 			let hType: typeof HType[keyof typeof HType];
-			if (1 / growthAmount < GROW_THRESHOLD) {
+			if (1 / growthAmount < config.GROW_THRESHOLD) {
 				hType = HType.Grow;
-			} else if (securityAmount > MAX_SECURITY || loop) {
+			} else if (securityAmount > config.MAX_SECURITY || loop) {
 				hType = HType.Weaken;
 				const maxThreads = Math.floor(fRam() / RAM_COSTS[hType]);
 				// No point `weaken()`ing more than securityAmount:
@@ -376,7 +380,7 @@ export async function main(ns: NS): Promise<void> {
 						ns.killall(host[1]);
 					}
 					const maxThreads = Math.floor(fRam() / RAM_COSTS[hType]);
-					const threads = Math.min(maxThreads, Math.floor(ns.hackAnalyzeThreads(target, MAX_DRAIN * info("MM", target))));
+					const threads = Math.min(maxThreads, Math.floor(ns.hackAnalyzeThreads(target, config.MAX_DRAIN * info("MM", target))));
 					if (threads > 0) {
 						resetShare();
 						ns.exec(FILES[hType], host[1], threads, target);
@@ -424,7 +428,7 @@ export async function main(ns: NS): Promise<void> {
 			if (!loop) {
 				act[target] = LETTERS[hType];
 			}
-			if (SHARE_REMAINING_RAM && (fRam() - sharedRAM) >= RAM_COSTS[HType.Share]) {
+			if (config.SHARE_REMAINING_RAM && (fRam() - sharedRAM) >= RAM_COSTS[HType.Share]) {
 				resetShare();
 				ns.exec(FILES[HType.Share], host[1], fRam() / RAM_COSTS[HType.Share]);
 			}
@@ -433,7 +437,7 @@ export async function main(ns: NS): Promise<void> {
 	}
 	// MODULES BELOW HERE
 	/** @param {number} d the maximum proportion (denominator) of money to spend */
-	async function hnManager(d: number) {
+	function hnManager(d: number) {
 		if (checkM(ns.hacknet.getPurchaseNodeCost(), d)) {
 			ns.hacknet.purchaseNode();
 		}
@@ -446,8 +450,8 @@ export async function main(ns: NS): Promise<void> {
 		}
 	}
 	/** @param {number} d the maximum proportion (denominator) of money to spend */
-	async function pServerManager(d: number) {
-		let ram = PSERV_MIN_RAM;
+	function pServerManager(d: number) {
+		let ram = config.PSERV_MIN_RAM;
 		if (!checkM(ns.getPurchasedServerCost(ram), d)) {
 			// can't afford any worthwhile servers yet
 			return;
@@ -464,7 +468,7 @@ export async function main(ns: NS): Promise<void> {
 		}
 		for (let i = ns.getPurchasedServers().length - 1; i >= 0; i--) {
 			const tmp = ns.getPurchasedServers()[i];
-			if (info("MR", tmp) < ram && checkM(ns.getPurchasedServerCost(ram), d) && !EXCLUDE.includes(tmp)) {
+			if (info("MR", tmp) < ram && checkM(ns.getPurchasedServerCost(ram), d) && !config.EXCLUDE.includes(tmp)) {
 				ns.killall(tmp);
 				ns.deleteServer(tmp);
 				buyServer(ram);
@@ -479,25 +483,25 @@ export async function main(ns: NS): Promise<void> {
 		servers = [];
 		targets = [];
 		exes = [];
-		hosts = [[Math.max(info("MR", HOME) - KEEP_FREE, 0), HOME]];
+		hosts = [[Math.max(info("MR", HOME) - config.KEEP_FREE, 0), HOME]];
 		act = {};
-		await scanExes();
+		scanExes();
 		await scanServers("", HOME);
-		await hackAll();
+		hackAll();
 		if (netManager) {
-			await hnManager(HACKNET_MONEY_PROPORTION);
+			hnManager(config.HACKNET_MONEY_PROPORTION);
 		}
 		if (serverManager) {
-			await pServerManager(PSERV_MONEY_PROPORTION);
+			pServerManager(config.PSERV_MONEY_PROPORTION);
 		}
-		if (ADDITIONAL_SCRIPTS && (i++ >= ADDITIONAL_SCRIPTS_PERIOD / PERIOD)) {
+		if (config.ADDITIONAL_SCRIPTS.length && (i++ >= config.ADDITIONAL_SCRIPTS_PERIOD / config.PERIOD)) {
 			try {
-				ADDITIONAL_SCRIPTS.map((script) => ns.run(script));
+				config.ADDITIONAL_SCRIPTS.map((script) => ns.run(script));
 			} catch { }
 			i = 0;
 		}
 		log();
 		const MILLIS_PER_SECOND = 1000.0;
-		await ns.sleep(PERIOD * MILLIS_PER_SECOND);
+		await ns.sleep(config.PERIOD * MILLIS_PER_SECOND);
 	}
 }
