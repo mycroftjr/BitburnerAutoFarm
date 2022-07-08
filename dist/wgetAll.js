@@ -7,6 +7,6 @@ export async function main(ns) {
         "sing/workForFaction.js", 
     ];
     for (const file of files) {
-        await ns.wget(root + file, file);
+        await ns.wget(root + file, file.includes("/") ? "/" + file : file);
     }
 }

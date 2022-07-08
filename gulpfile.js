@@ -28,7 +28,7 @@ gulp.task("compile-ts", function () {
             var wgetAll = [
                 "/** @param {NS} ns */",
                 "export async function main(ns) {",
-                "    const root = \"https://raw.githubusercontent.com/mycroftjr/BitburnerAutoFarm/master/dist/\";",
+                `    const root = "https://raw.githubusercontent.com/mycroftjr/BitburnerAutoFarm/master/dist/";`,
                 "    const files = [",
             ];
             let line = " ".repeat(8);
@@ -44,7 +44,7 @@ gulp.task("compile-ts", function () {
             wgetAll.push(
                 "    ];",
                 "    for (const file of files) {",
-                "        await ns.wget(root + file, file);",
+                `        await ns.wget(root + file, file.includes("/") ? "/" + file : file);`,
                 "    }",
                 "}",
             );
