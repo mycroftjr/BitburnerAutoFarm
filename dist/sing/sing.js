@@ -4,30 +4,36 @@ export async function main(ns) {
     // TODO: remove restriction after achievo
     const BITNODE_1_MAX_RAM = 128;
     const BITNODE_1_MAX_CORES = 1;
+    const HOST = ns.getHostname();
     
     ns.disableLog("sleep");
     /** async ns.run
      * @param {Parameters<typeof NS.run>} params */
     async function aRun(...params) {
+        if (ns.getScriptRam(params[0]) > ns.getServerMaxRam(HOST) - ns.getServerUsedRam(HOST)) {
+            ns.scriptKill("share.js", HOST);
+        }
         const pid = ns.run(...params);
         if (pid === 0)
             return;
-        while (ns.isRunning(pid, ns.getHostname())) {
+        while (ns.isRunning(pid, HOST)) {
             await ns.sleep(1);
         }
     }
     
-    const bn = ns.getPlayer().bitNodeN;
-    
+    const maxHackLevel = ns.getServerRequiredHackingLevel("w0r1d_d43m0n");
+    const player = ns.getPlayer();
+    const bn = player.bitNodeN;
     while (true) {
+        if (player.hacking >= maxHackLevel)
+            await aRun("/sing/ascend.js", 1, bn);
         await aRun("/sing/upgrades.js", 1, bn === 1 ? BITNODE_1_MAX_RAM : Infinity, bn === 1 ? BITNODE_1_MAX_CORES : Infinity);
-        if (!ns.scriptRunning("/sing/createProg.js", ns.getHostname())) {
-            await aRun("/sing/activities.js");
+        if (!ns.scriptRunning("/sing/createProg.js", HOST)) {
+            await aRun("/sing/activities.js", 1, maxHackLevel, bn);
         }
         await aRun("/sing/keepRunning.js");
-        await aRun("/sing/ascend.js", 1, bn);
         
-        const MILLIS_PER_SECOND = 3000;
-        await ns.sleep(MILLIS_PER_SECOND);
+        const PERIOD_IN_MILLIS = 3000;
+        await ns.sleep(PERIOD_IN_MILLIS);
     }
 }

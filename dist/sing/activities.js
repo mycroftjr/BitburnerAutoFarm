@@ -52,8 +52,16 @@ export async function main(ns) {
     /** END OF CONFIGURABLE VALUES */
     const config = await parseConfig(ns, CONFIG_FILE, DEFAULT_CONFIG);
     
+    // The maximum hacking level we should ever need
+    let maxHackLevel = ns.args[0];
+    // The current BN
+    const bn = ns.args[1];
+    const HOST = ns.getHostname();
+    
     // the number of augments to be queued at once to get the achievement
     const MIN_AUGS_FOR_ACHIEVO = 40;
+    // The optimal BN to go for said achievement in
+    const CHEAP_BN = 2;
     
     /** Augmentations offered by every faction */
     const COMMON_AUGS = ["NeuroFlux Governor"];
@@ -97,6 +105,30 @@ export async function main(ns) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             ns.tprint(...msg);
         }
+    }
+    
+    /**
+     * @param {string} company
+     * @param {number} untilRep the reputation to keep working until reached
+    */
+    function tryWorkForCompany(company, untilRep = Infinity) {
+        for (const job of JOB_PRIOS) {
+            if (ns.singularity.applyToCompany(company, job)) {
+                ns.scriptKill("/sing/workForFaction.js", ns.getHostname());
+                if (ns.getScriptRam("/sing/workForCompany.js") > ns.getServerMaxRam(HOST) - ns.getServerUsedRam(HOST)) {
+                    ns.scriptKill("share.js", HOST);
+                }
+                ns.scriptKill("share.js", ns.getHostname());
+                if (ns.run("/sing/workForCompany.js", 1, company, job, untilRep)) {
+                    if (untilRep != Infinity)
+                        ns.tprint(`Working for company ${company} (${ns.nFormat(untilRep, "0a")} rep needed)`);
+                } else {
+                    ns.tprint(`Failed to start working for company ${company}! Is there enough free RAM?`);
+                }
+                return true;
+            }
+        }
+        return false;
     }
     
     const forceInstall = ns.args.length ? ns.args[0] == "FORCE_INSTALL" : false;
@@ -154,25 +186,14 @@ export async function main(ns) {
                 // The next important faction is a company faction we're not in. Work the company.
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 const [, company, repNeeded, hackingLevelNeeded] = COMPANY_LOOKUP.get(faction);
+                maxHackLevel = Math.max(maxHackLevel, hackingLevelNeeded);
                 if (!working && ns.getPlayer().hacking >= hackingLevelNeeded && ns.singularity.getCompanyRep(company) < repNeeded) {
                     // can't use ns.isRunning() as job can't always be predicted
                     if (ns.scriptRunning("/sing/workForCompany.js", ns.getHostname())) {
                         working = true;
                     } else {  // run it
                         ns.singularity.quitJob(company);
-                        for (const job of JOB_PRIOS) {
-                            if (ns.singularity.applyToCompany(company, job)) {
-                                ns.scriptKill("/sing/workForFaction.js", ns.getHostname());
-                                ns.scriptKill("share.js", ns.getHostname());
-                                if (ns.run("/sing/workForCompany.js", 1, company, job, repNeeded)) {
-                                    ns.tprint(`Working for company ${company} (${ns.nFormat(repNeeded, "0a")} rep needed)`);
-                                } else {
-                                    ns.tprint(`Failed to start working for company ${company}! Is there enough free RAM?`);
-                                }
-                                working = true;
-                                break;
-                            }
-                        }
+                        working = tryWorkForCompany(company, repNeeded);
                     }
                     if (working)
                         break;
@@ -184,6 +205,7 @@ export async function main(ns) {
             } else if (CITY_FACTIONS.has(faction) && !awaitingCityFactionInvite) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 const [neededCity, neededMoney, neededHackingLevel, enemies] = CITY_FACTIONS.get(faction);
+                maxHackLevel = Math.max(maxHackLevel, neededHackingLevel);
                 if (enemies.filter((enemy) => ns.getPlayer().factions.includes(enemy)).length)
                     continue;
                 if (ns.getPlayer().money >= neededMoney + AIRFARE && ns.getPlayer().hacking >= neededHackingLevel) {
@@ -196,6 +218,7 @@ export async function main(ns) {
         }
         if (working || !ns.getPlayer().factions.includes(faction))
             continue;
+        // TODO: for The Cave augment, if can donate for rep, do so; else, softReset when we would have enough favor to donate to the faction
         for (const aug of augs) {
             if (COMMON_AUGS.includes(aug))
                 continue;
@@ -244,7 +267,7 @@ export async function main(ns) {
     }
     await ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
     
-    if (forceInstall || !working || augsToBuyMap.size > MIN_AUGS_FOR_ACHIEVO) {
+    if (forceInstall || augsToBuyMap.size && (!working || (bn == CHEAP_BN && augsToBuyMap.size > MIN_AUGS_FOR_ACHIEVO))) {
         // If we aren't working towards any augmentations and have augs to buy/install, let's do so now
         for (const faction of ns.getPlayer().factions) {
             const augs = getUnownedAugs(faction);
@@ -274,10 +297,16 @@ export async function main(ns) {
         const sortAsc = (arr) => arr.sort((a, b) => a[0] - b[0]);
         sortAsc(augsToBuy);
         
-        ns.print("augsToBuy: ", augsToBuy);
+        const preOwnedAugs = ns.singularity.getOwnedAugmentations(false);
+        const boughtAugs = myAugs.length - preOwnedAugs.length;
+        const augsAvailableToQueue = boughtAugs + Math.max(augsToBuyMap.size, augsToBuy.length);
         
-        if ((augsToBuyMap.size < config.MIN_AUGS_TO_CONSIDER_ACHIEVO || augsToBuyMap.size >= MIN_AUGS_FOR_ACHIEVO)
-            && (augsToBuy.length || (myAugs.length - ns.singularity.getOwnedAugmentations(false).length))) {
+        ns.print("augsToBuy: ", augsToBuy);
+        if (augsToBuy.length)
+            ns.tail();
+        
+        if (forceInstall || (boughtAugs > 0 || (augsToBuy.length && augsToBuy[augsToBuy.length - 1][0] <= ns.getPlayer().money)
+            && (bn != CHEAP_BN || augsAvailableToQueue < config.MIN_AUGS_TO_CONSIDER_ACHIEVO || augsAvailableToQueue >= MIN_AUGS_FOR_ACHIEVO))) {
             // Liquidate (sell) all stocks
             ns.scriptKill("stockBot.js", ns.getHostname());
             for (const sym of ns.stock.getSymbols()) {
@@ -312,11 +341,8 @@ export async function main(ns) {
                     const preReq = preReqs.pop();  // lowest first
                     if (bought.has(preReq))
                         continue;
-                    if (!augsToBuyMap.has(preReq))
-                        break;
-                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                    const preReqFaction = augsToBuyMap.get(preReq).faction;
-                    if (!buyAug(preReqFaction, preReq))
+                    const preReqFaction = augsToBuyMap.get(preReq)?.faction;
+                    if (!preReqFaction || !buyAug(preReqFaction, preReq))
                         break;
                 }
                 buyAug(faction, aug);
@@ -332,13 +358,14 @@ export async function main(ns) {
             while (augsToBuy.length && (augsToBuy.at(-1)?.[0] ?? Infinity) < ns.getPlayer().money) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 const [price, aug, faction] = augsToBuy.pop();
-                ns.singularity.purchaseAugmentation(faction, aug);
-                const newPrice = ns.singularity.getAugmentationPrice(aug);
-                if (newPrice === price) {
-                    throw new Error(`Price of ${aug} did not change! Was ${price}, now ${newPrice}!`);
+                if (ns.singularity.purchaseAugmentation(faction, aug)) {
+                    const newPrice = ns.singularity.getAugmentationPrice(aug);
+                    if (newPrice === price) {
+                        throw new Error(`Price of ${aug} did not change! Was ${price}, now ${newPrice}!`);
+                    }
+                    augsToBuy.push([newPrice, aug, faction]);
+                    sortAsc(augsToBuy);
                 }
-                augsToBuy.push([newPrice, aug, faction]);
-                sortAsc(augsToBuy);
             }
             
             for (const faction of ns.getPlayer().factions) {
@@ -346,24 +373,65 @@ export async function main(ns) {
             }
             await ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
             
-            if (augsToBuyMap.size < config.MIN_AUGS_TO_CONSIDER_ACHIEVO
-                || bought.size - ns.singularity.getOwnedAugmentations(false).length >= MIN_AUGS_FOR_ACHIEVO) {
+            if (forceInstall || augsAvailableToQueue < config.MIN_AUGS_TO_CONSIDER_ACHIEVO
+                || bn != CHEAP_BN || (bought.size - preOwnedAugs.length >= MIN_AUGS_FOR_ACHIEVO)) {
                 ns.singularity.installAugmentations("/sing/sing.js");
+            } else {
+                ns.toast(`Waiting on ${MIN_AUGS_FOR_ACHIEVO - (bought.size - preOwnedAugs.length)} more augments (for achievo) before installing!`, "warning", null);
             }
+        } else if (augsToBuy.length && augsToBuy[augsToBuy.length - 1][0] > ns.getPlayer().money) {
+            ns.print("Cannot afford most expensive purchasable augment yet!");
         }
     }
     
     if (!working) {
-        const newCity = UNIS.has(city) ? city : Array.from(UNIS.keys())[0];
-        if (newCity === city || (!awaitingCityFactionInvite && ns.singularity.travelToCity(newCity))) {
-            const uni = UNIS.get(city);
-            if (uni) {
-                ns.print(`attempting to study at ${uni}`);
-                const focus = ns.singularity.isBusy() && ns.singularity.isFocused();
-                ns.singularity.universityCourse(uni, "Study Computer Science", focus);
-            } else {
-                ns.tail();
-                ns.print("Failed to find university in city ", newCity);
+        if (ns.getPlayer().hacking >= maxHackLevel && !ns.singularity.isBusy()) {
+            // Use actions to make money
+            let maxCompanyRep = -Infinity;
+            let maxRepCompany = null;
+            const companies = new Set();
+            for (const [, [, company, ,]] of COMPANY_LOOKUP) {
+                companies.add(company);
+            }
+            // A map of company name to position held in the company
+            const jobs = new Map(ns.getPlayer().jobs);
+            for (const [company,] of jobs) {
+                companies.add(company);
+            }
+            for (const company of companies) {
+                const rep = ns.singularity.getCompanyRep(company);
+                if (rep > maxCompanyRep) {
+                    maxCompanyRep = rep;
+                    maxRepCompany = company;
+                }
+            }
+            // Work for the company we have the most reputation with
+            if (maxRepCompany)
+                tryWorkForCompany(maxRepCompany);
+            
+            /*
+            for (const [, [, company, , reqHackingLevel]] of COMPANY_LOOKUP) {
+                maxHackLevel = Math.max(maxHackLevel, reqHackingLevel);
+                if (company in jobs) continue;
+                ns.singularity.quitJob(company);
+                if (ns.getPlayer().hacking > reqHackingLevel && tryWorkForCompany(company))
+                    ns.scriptKill("/sing/workForCompany.js", HOST);
+            }
+            // TODO: Find the most profitable job? Would need income/salary numbers...
+            */
+        }
+        if (ns.getPlayer().hacking < maxHackLevel) {
+            const newCity = UNIS.has(city) ? city : Array.from(UNIS.keys())[0];
+            if (newCity === city || (!awaitingCityFactionInvite && ns.singularity.travelToCity(newCity))) {
+                const uni = UNIS.get(city);
+                if (uni) {
+                    ns.print(`attempting to study at ${uni}`);
+                    const focus = ns.singularity.isBusy() && ns.singularity.isFocused();
+                    ns.singularity.universityCourse(uni, "Study Computer Science", focus);
+                } else {
+                    ns.tail();
+                    ns.print("Failed to find university in city ", newCity);
+                }
             }
         }
     }
