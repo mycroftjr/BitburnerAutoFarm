@@ -8,7 +8,10 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     const BITNODE_1_MAX_CORES = 1;
     const HOST = ns.getHostname();
 
+    ns.disableLog("disableLog");
     ns.disableLog("sleep");
+    ns.disableLog("getServerMaxRam");
+    ns.disableLog("getServerUsedRam");
     /** async ns.run
      * @param {Parameters<typeof NS.run>} params */
     async function aRun(...params: DeepReadonly<Parameters<typeof ns.run>>) {
@@ -23,9 +26,10 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     }
 
     const maxHackLevel = ns.getServerRequiredHackingLevel("w0r1d_d43m0n");
-    const player = ns.getPlayer();
+    let player = ns.getPlayer();
     const bn = player.bitNodeN;
 	while (true) {
+        player = ns.getPlayer();
         if (player.hacking >= maxHackLevel)
             await aRun("/sing/ascend.js", 1, bn);
         await aRun("/sing/upgrades.js", 1, bn === 1 ? BITNODE_1_MAX_RAM : Infinity, bn === 1 ? BITNODE_1_MAX_CORES : Infinity);
