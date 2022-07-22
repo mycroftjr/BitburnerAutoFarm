@@ -17,14 +17,18 @@ export function main(ns: DeepReadonly<NS>) {
     ];
     /* eslint-enable no-magic-numbers */
     const TOR_COST = 200e3;
+    const HOST = ns.getHostname();
 
     const maxRam = ns.args[0];
     const maxCores = ns.args[1];
     for (const [program, hackingLevelNeeded, moneyNeeded] of PROGRAMS) {
         if (!ns.fileExists(program, "home")) {
             if (ns.getPlayer().money < moneyNeeded + TOR_COST || !ns.singularity.purchaseTor() || !ns.singularity.purchaseProgram(program)) {
-                if (ns.getPlayer().hacking >= hackingLevelNeeded && !ns.isRunning("/sing/createProg", ns.getHostname(), program)) {
-                    ns.run("/sing/createProg", 1, program);
+                // TODO: don't work for the program if will make enough money to buy it in the same amount of time?
+                if (ns.getPlayer().hacking >= hackingLevelNeeded && !ns.isRunning("/sing/createProg.js", HOST, program)) {
+                    ns.scriptKill("/sing/workForFaction.js", HOST);
+                    ns.scriptKill("/sing/workForCompany.js", HOST);
+                    ns.run("/sing/createProg.js", 1, program);
                 }
                 break;
             }
