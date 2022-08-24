@@ -1,6 +1,7 @@
 import type { NS, ProcessInfo } from "@ns";
+import type { DeepReadonly } from "ts-essentials";
 
-export async function main(ns: NS): Promise<void> {
+export async function main(ns: DeepReadonly<NS>): Promise<void> {
     const hashes: Record<string, number> = {};
 
     const files = ns.ls("home", ".js");
@@ -19,7 +20,7 @@ export async function main(ns: NS): Promise<void> {
             if (hash != hashes[file]) {
                 ns.tprintf(`INFO: Detected change in ${file}`);
 
-                const processes = ns.ps().filter((p: ProcessInfo) => {
+                const processes = ns.ps().filter((p: DeepReadonly<ProcessInfo>) => {
                     return p.filename == file;
                 });
 

@@ -301,7 +301,7 @@ export async function main(ns) {
                     hosts.push([info("MR", server), server]);
                 }
                 servers.push(server);
-                await ns.scp(FILES, HOME, server);
+                await ns.scp(FILES, server);
                 await scanServers(current, server);
             }
         }

@@ -62,8 +62,13 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
     // the number of augments to be queued at once to get the achievement
     const MIN_AUGS_FOR_ACHIEVO = 40;
-    // The optimal BN to go for said achievement in
-    const CHEAP_BN = 2;
+
+    // the lowest karma needed by any faction
+    const LOWEST_KARMA = -90;
+
+    function goForAchievo() {
+        return ns.getPlayer().hasCorporation;
+    }
 
     /** Augmentations offered by every faction */
     const COMMON_AUGS = ["NeuroFlux Governor"];
@@ -178,11 +183,12 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
     let working = false;
     let awaitingCityFactionInvite = false;
-    for (const [faction, ] of config.FACTION_PRIOS) {
+
+    const considerFaction = (faction: string) => {
         ns.print(faction);
         const augs = getUnownedAugs(faction);
         factionData.set(faction, augs.length - COMMON_AUGS.length);
-        if (augs.length <= COMMON_AUGS.length) continue;
+        if (augs.length <= COMMON_AUGS.length) return;
         if (ns.singularity.checkFactionInvitations().includes(faction)) {
             ns.singularity.joinFaction(faction);
         }
@@ -192,7 +198,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 const [, company, repNeeded, hackingLevelNeeded] = COMPANY_LOOKUP.get(faction)!;
                 maxHackLevel = Math.max(maxHackLevel, hackingLevelNeeded);
-                if (!working && ns.getPlayer().hacking >= hackingLevelNeeded && ns.singularity.getCompanyRep(company) < repNeeded) {
+                if (!working && ns.getPlayer().skills.hacking >= hackingLevelNeeded && ns.singularity.getCompanyRep(company) < repNeeded) {
                     // can't use ns.isRunning() as job can't always be predicted
                     if (ns.scriptRunning("/sing/workForCompany.js", ns.getHostname())) {
                         working = true;
@@ -200,7 +206,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                         ns.singularity.quitJob(company);
                         working = tryWorkForCompany(company, repNeeded);
                     }
-                    if (working) break;
+                    if (working) return;
                     else {
                         ns.tail();
                         ns.print("Failed to work for ", company, "?!");
@@ -211,8 +217,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 const [neededCity, neededMoney, neededHackingLevel, enemies] = CITY_FACTIONS.get(faction)!;
                 maxHackLevel = Math.max(maxHackLevel, neededHackingLevel);
                 if (enemies.filter((enemy) => ns.getPlayer().factions.includes(enemy)).length)
-                    continue;
-                if (ns.getPlayer().money >= neededMoney + AIRFARE && ns.getPlayer().hacking >= neededHackingLevel) {
+                    return;
+                if (ns.getPlayer().money >= neededMoney + AIRFARE && ns.getPlayer().skills.hacking >= neededHackingLevel) {
                     if (neededCity === city || ns.singularity.travelToCity(neededCity)) {
                         city = neededCity;
                         awaitingCityFactionInvite = true;
@@ -220,7 +226,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 }
             }
         }
-        if (working || !ns.getPlayer().factions.includes(faction)) continue;
+        if (working || !ns.getPlayer().factions.includes(faction)) return;
         // TODO: for The Cave augment, if can donate for rep, do so; else, softReset when we would have enough favor to donate to the faction
         for (const aug of augs) {
             if (COMMON_AUGS.includes(aug)) continue;
@@ -245,13 +251,28 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 if (working) break;
             }
         }
+    };
+
+    const factionsConsidered = new Set();
+    for (const [faction, ] of config.FACTION_PRIOS) {
+        factionsConsidered.add(faction);
+        considerFaction(faction);
+        if (working) break;
     }
+    for (const faction of ns.getPlayer().factions) {
+        if (!factionsConsidered.has(faction)) {
+            factionsConsidered.add(faction);
+            considerFaction(faction);
+        }
+        if (working) break;
+    }
+
     if (!working) {
         ns.scriptKill("/sing/workForCompany.js", ns.getHostname());
         ns.scriptKill("/sing/workForFaction.js", ns.getHostname());
     }
 
-    if (config.ACCEPT_ALL_INVITATIONS) {
+    if (config.ACCEPT_ALL_INVITATIONS || (augsToBuyMap.size < MIN_AUGS_FOR_ACHIEVO && augsToBuyMap.size > config.MIN_AUGS_TO_CONSIDER_ACHIEVO)) {
         for (const faction of ns.singularity.checkFactionInvitations()) {
             if (config.FACTION_BLACKLIST.includes(faction)) continue;
             const numAugsNeeded = getUnownedAugs(faction).length - COMMON_AUGS.length;
@@ -266,7 +287,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     }
     await ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
 
-    if (forceInstall || augsToBuyMap.size && (!working || (bn == CHEAP_BN && augsToBuyMap.size > MIN_AUGS_FOR_ACHIEVO))) {
+    if (forceInstall || augsToBuyMap.size && (!working || (goForAchievo() && augsToBuyMap.size > MIN_AUGS_FOR_ACHIEVO))) {
         // If we aren't working towards any augmentations and have augs to buy/install, let's do so now
         for (const faction of ns.getPlayer().factions) {
             const augs = getUnownedAugs(faction);
@@ -301,15 +322,16 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         const augsAvailableToQueue = boughtAugs + Math.max(augsToBuyMap.size, augsToBuy.length);
 
         ns.print("augsToBuy: ", augsToBuy);
+        ns.print(`(length: ${augsToBuy.length} elements)`);
         if (augsToBuy.length)
             ns.tail();
 
         if (forceInstall || (boughtAugs > 0 || (augsToBuy.length && augsToBuy[augsToBuy.length - 1][0] <= ns.getPlayer().money)
-            && (bn != CHEAP_BN || augsAvailableToQueue < config.MIN_AUGS_TO_CONSIDER_ACHIEVO || augsAvailableToQueue >= MIN_AUGS_FOR_ACHIEVO))) {
+            && (!goForAchievo() || augsAvailableToQueue < config.MIN_AUGS_TO_CONSIDER_ACHIEVO || augsAvailableToQueue >= MIN_AUGS_FOR_ACHIEVO))) {
             // Liquidate (sell) all stocks
             ns.scriptKill("stockBot.js", ns.getHostname());
             for (const sym of ns.stock.getSymbols()) {
-                ns.stock.sell(sym, Infinity);
+                ns.stock.sellStock(sym, Infinity);
                 try {
                     ns.stock.sellShort(sym, Infinity);
                 } catch {}
@@ -368,7 +390,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             await ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
 
             if (forceInstall || augsAvailableToQueue < config.MIN_AUGS_TO_CONSIDER_ACHIEVO
-                || bn != CHEAP_BN || (bought.size - preOwnedAugs.length >= MIN_AUGS_FOR_ACHIEVO)) {
+                || !goForAchievo() || (bought.size - preOwnedAugs.length >= MIN_AUGS_FOR_ACHIEVO)) {
                 ns.singularity.installAugmentations("/sing/sing.js");
             } else {
                 ns.toast(`Waiting on ${MIN_AUGS_FOR_ACHIEVO - (bought.size - preOwnedAugs.length)} more augments (for achievo) before installing!`, "warning", null);
@@ -379,7 +401,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     }
 
     if (!working) {
-        if (ns.getPlayer().hacking >= maxHackLevel && !ns.singularity.isBusy()) {
+        if (ns.getPlayer().skills.hacking >= maxHackLevel && !ns.singularity.isBusy()) {
             // Use actions to make money
             let maxCompanyRep = -Infinity;
             let maxRepCompany = null;
@@ -388,8 +410,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 companies.add(company);
             }
             // A map of company name to position held in the company
-            const jobs = new Map<string, string>(ns.getPlayer().jobs as Map<string, string>);
-            for (const [company, ] of jobs) {
+            const jobs = ns.getPlayer().jobs;
+            for (const [company, ] of Object.entries(jobs)) {
                 companies.add(company);
             }
             for (const company of companies) {
@@ -400,8 +422,10 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 }
             }
             // Work for the company we have the most reputation with
-            if (maxRepCompany)
+            if (maxRepCompany) {
                 tryWorkForCompany(maxRepCompany);
+                return;
+            }
 
             /*
             for (const [, [, company, , reqHackingLevel]] of COMPANY_LOOKUP) {
@@ -414,7 +438,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             // TODO: Find the most profitable job? Would need income/salary numbers...
             */
         }
-        if (ns.getPlayer().hacking < maxHackLevel) {
+         
+        if (ns.getPlayer().skills.hacking < maxHackLevel) {
             const newCity = UNIS.has(city) ? city : Array.from(UNIS.keys())[0];
             if (newCity === city || (!awaitingCityFactionInvite && ns.singularity.travelToCity(newCity))) {
                 const uni = UNIS.get(city);
@@ -422,10 +447,17 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                     ns.print(`attempting to study at ${uni}`);
                     const focus = ns.singularity.isBusy() && ns.singularity.isFocused();
                     ns.singularity.universityCourse(uni, "Study Computer Science", focus);
+                    return;
                 } else {
                     ns.tail();
                     ns.print("Failed to find university in city ", newCity);
                 }
+            }
+        }
+        if (eval("ns.heart.break()") > LOWEST_KARMA) {
+            if (!ns.scriptRunning("doCrime.js", HOST)) {
+                ns.run("doCrime.js", 1, "homicide", LOWEST_KARMA);
+                return;
             }
         }
     }

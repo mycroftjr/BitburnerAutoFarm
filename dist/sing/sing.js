@@ -29,7 +29,7 @@ export async function main(ns) {
     const bn = player.bitNodeN;
     while (true) {
         player = ns.getPlayer();
-        if (player.hacking >= maxHackLevel)
+        if (player.skills.hacking >= maxHackLevel)
             await aRun("/sing/ascend.js", 1, bn);
         await aRun("/sing/upgrades.js", 1, bn === 1 ? BITNODE_1_MAX_RAM : Infinity, bn === 1 ? BITNODE_1_MAX_CORES : Infinity);
         if (!ns.scriptRunning("/sing/createProg.js", HOST)) {

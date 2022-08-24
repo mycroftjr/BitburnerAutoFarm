@@ -23,9 +23,10 @@ export function main(ns: DeepReadonly<NS>) {
     const maxCores = ns.args[1];
     for (const [program, hackingLevelNeeded, moneyNeeded] of PROGRAMS) {
         if (!ns.fileExists(program, "home")) {
-            if (ns.getPlayer().money < moneyNeeded + TOR_COST || !ns.singularity.purchaseTor() || !ns.singularity.purchaseProgram(program)) {
+            const player = ns.getPlayer();
+            if (player.money < moneyNeeded + TOR_COST || !ns.singularity.purchaseTor() || !ns.singularity.purchaseProgram(program)) {
                 // TODO: don't work for the program if will make enough money to buy it in the same amount of time?
-                if (ns.getPlayer().hacking >= hackingLevelNeeded && !ns.isRunning("/sing/createProg.js", HOST, program)) {
+                if (player.skills.hacking >= hackingLevelNeeded && !ns.isRunning("/sing/createProg.js", HOST, program)) {
                     ns.scriptKill("/sing/workForFaction.js", HOST);
                     ns.scriptKill("/sing/workForCompany.js", HOST);
                     ns.run("/sing/createProg.js", 1, program);
