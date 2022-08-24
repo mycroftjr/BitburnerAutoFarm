@@ -304,7 +304,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 					hosts.push([info("MR", server), server]);
 				}
 				servers.push(server);
-				await ns.scp(FILES, HOME, server);
+				await ns.scp(FILES, server);
 				await scanServers(current, server);
 			}
 		}

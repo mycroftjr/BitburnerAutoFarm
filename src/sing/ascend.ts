@@ -10,7 +10,7 @@ export function main(ns: DeepReadonly<NS>) {
     /* eslint-enable no-magic-numbers */
 
     const bn = ns.args[0];
-    const sFiles = ns.getOwnedSourceFiles();
+    const sFiles = ns.singularity.getOwnedSourceFiles();
     for (const p of SOURCE_FILE_PRIORITY) {
         const file = sFiles.find((sFile) => sFile.n === p[0]);
         const lvl = (file?.lvl ?? 0) + (p[0] === bn ? 1 : 0);
