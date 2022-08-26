@@ -2,6 +2,11 @@ import type { NS } from "@ns";
 import type { DeepReadonly } from "ts-essentials";
 import { parseConfig } from "configHelper";
 
+// Whether we are currently working for reputation
+let working = false;
+// Whether we are currently waiting for a city faction invite
+let awaitingCityFactionInvite = false;
+
 /** @param {NS} ns */
 export async function main(ns: DeepReadonly<NS>): Promise<void> {
     // The location of the config file that the user should edit.
@@ -121,11 +126,11 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     function tryWorkForCompany(company: string, untilRep = Infinity) {
         for (const job of JOB_PRIOS) {
             if (ns.singularity.applyToCompany(company, job)) {
-                ns.scriptKill("/sing/workForFaction.js", ns.getHostname());
+                ns.scriptKill("/sing/workForFaction.js", HOST);
                 if (ns.getScriptRam("/sing/workForCompany.js") > ns.getServerMaxRam(HOST) - ns.getServerUsedRam(HOST)) {
                     ns.scriptKill("share.js", HOST);
                 }
-                ns.scriptKill("share.js", ns.getHostname());
+                ns.scriptKill("share.js", HOST);
                 if (ns.run("/sing/workForCompany.js", 1, company, job, untilRep)) {
                     if (untilRep != Infinity)
                         ns.tprint(`Working for company ${company} (${ns.nFormat(untilRep, "0a")} rep needed)`);
@@ -181,10 +186,12 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         return !prereqs.filter((prereq) => !myAugs.includes(prereq) && !augsToBuyMap.has(prereq)).length;
     }
 
-    let working = false;
-    let awaitingCityFactionInvite = false;
-
-    const considerFaction = (faction: string) => {
+    /** Examine the faction for any augs we might want.
+     * @param {string} faction 
+     * @modifies {working}
+     * @modifies {awaitingCityFactionInvite}
+     */
+    function considerFaction(faction: string) {
         ns.print(faction);
         const augs = getUnownedAugs(faction);
         factionData.set(faction, augs.length - COMMON_AUGS.length);
@@ -200,7 +207,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 maxHackLevel = Math.max(maxHackLevel, hackingLevelNeeded);
                 if (!working && ns.getPlayer().skills.hacking >= hackingLevelNeeded && ns.singularity.getCompanyRep(company) < repNeeded) {
                     // can't use ns.isRunning() as job can't always be predicted
-                    if (ns.scriptRunning("/sing/workForCompany.js", ns.getHostname())) {
+                    if (ns.scriptRunning("/sing/workForCompany.js", HOST)) {
                         working = true;
                     } else {  // run it
                         ns.singularity.quitJob(company);
@@ -231,16 +238,23 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         for (const aug of augs) {
             if (COMMON_AUGS.includes(aug)) continue;
             const repNeeded = ns.singularity.getAugmentationRepReq(aug);
+            const repToGain = () => { return repNeeded - ns.singularity.getFactionRep(faction) };
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            if (!working && ns.singularity.getFactionRep(faction) < repNeeded) {
-                if (ns.isRunning("/sing/workForFaction.js", ns.getHostname(), faction, repNeeded)) {
+            if (working || repToGain() < 0) continue;
+            ns.scriptKill("share.js", HOST);
+
+            // Try to use corp funds to get the faction rep high enough
+            ns.run("bribeWithCorpFunds.js", 1, faction, repToGain());
+
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            if (!working && repToGain() > 0) {
+                if (ns.isRunning("/sing/workForFaction.js", HOST, faction, repNeeded)) {
                     working = true;
                 } else {  // run it
                     // don't work towards augs we can't get the prereqs for yet
                     if (!haveOrCanBuyPrereqs(aug)) continue;
 
-                    ns.scriptKill("/sing/workForFaction.js", ns.getHostname());
-                    ns.scriptKill("share.js", ns.getHostname());
+                    ns.scriptKill("/sing/workForFaction.js", HOST);
                     if (ns.run("/sing/workForFaction.js", 1, faction, repNeeded)) {
                         ns.tprint(`Working towards aug ${aug} from ${faction} (${ns.nFormat(repNeeded, "0a")} rep needed)`);
                         working = true;
@@ -251,7 +265,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 if (working) break;
             }
         }
-    };
+    }
 
     const factionsConsidered = new Set();
     for (const [faction, ] of config.FACTION_PRIOS) {
@@ -268,8 +282,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     }
 
     if (!working) {
-        ns.scriptKill("/sing/workForCompany.js", ns.getHostname());
-        ns.scriptKill("/sing/workForFaction.js", ns.getHostname());
+        ns.scriptKill("/sing/workForCompany.js", HOST);
+        ns.scriptKill("/sing/workForFaction.js", HOST);
     }
 
     if (config.ACCEPT_ALL_INVITATIONS || (augsToBuyMap.size < MIN_AUGS_FOR_ACHIEVO && augsToBuyMap.size > config.MIN_AUGS_TO_CONSIDER_ACHIEVO)) {
@@ -329,7 +343,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         if (forceInstall || (boughtAugs > 0 || (augsToBuy.length && augsToBuy[augsToBuy.length - 1][0] <= ns.getPlayer().money)
             && (!goForAchievo() || augsAvailableToQueue < config.MIN_AUGS_TO_CONSIDER_ACHIEVO || augsAvailableToQueue >= MIN_AUGS_FOR_ACHIEVO))) {
             // Liquidate (sell) all stocks
-            ns.scriptKill("stockBot.js", ns.getHostname());
+            ns.scriptKill("stockBot.js", HOST);
             for (const sym of ns.stock.getSymbols()) {
                 ns.stock.sellStock(sym, Infinity);
                 try {
