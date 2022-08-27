@@ -191,11 +191,13 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
      * @modifies {working}
      * @modifies {awaitingCityFactionInvite}
      */
-    function considerFaction(faction: string) {
-        ns.print(faction);
+    async function considerFaction(faction: string) {
         const augs = getUnownedAugs(faction);
         factionData.set(faction, augs.length - COMMON_AUGS.length);
-        if (augs.length <= COMMON_AUGS.length) return;
+        if (augs.length <= COMMON_AUGS.length) {
+            ns.print("Have all augs from ", faction, "?");
+            return;
+        }
         if (ns.singularity.checkFactionInvitations().includes(faction)) {
             ns.singularity.joinFaction(faction);
         }
@@ -233,7 +235,12 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 }
             }
         }
-        if (working || !ns.getPlayer().factions.includes(faction)) return;
+        if (working || !ns.getPlayer().factions.includes(faction)) {
+            ns.print(faction, " - ", working ? "working" : "not in faction yet");
+            return;
+        }
+
+        ns.print(faction);
         // TODO: for The Cave augment, if can donate for rep, do so; else, softReset when we would have enough favor to donate to the faction
         for (const aug of augs) {
             if (COMMON_AUGS.includes(aug)) continue;
@@ -243,8 +250,10 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             if (working || repToGain() < 0) continue;
             ns.scriptKill("share.js", HOST);
 
+            ns.tprint("Attempting to bribe faction ", faction);
             // Try to use corp funds to get the faction rep high enough
-            ns.run("bribeWithCorpFunds.js", 1, faction, repToGain());
+            ns.run("/sing/bribeWithCorpFunds.js", 1, faction, repToGain());
+            await ns.sleep(1^2);
 
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             if (!working && repToGain() > 0) {
@@ -270,13 +279,13 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     const factionsConsidered = new Set();
     for (const [faction, ] of config.FACTION_PRIOS) {
         factionsConsidered.add(faction);
-        considerFaction(faction);
+        await considerFaction(faction);
         if (working) break;
     }
     for (const faction of ns.getPlayer().factions) {
         if (!factionsConsidered.has(faction)) {
             factionsConsidered.add(faction);
-            considerFaction(faction);
+            await considerFaction(faction);
         }
         if (working) break;
     }
