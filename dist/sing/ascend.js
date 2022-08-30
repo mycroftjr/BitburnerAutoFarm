@@ -3,7 +3,7 @@
 export function main(ns) {
     const MAX_SF_LEVEL = 3;
     /* eslint-disable no-magic-numbers */
-    const SOURCE_FILE_PRIORITY = [[4, 1], [1, MAX_SF_LEVEL], [5, MAX_SF_LEVEL], [4, MAX_SF_LEVEL], [3, 1], [6, 1], [7, 1], [2, 1], [9, MAX_SF_LEVEL], [10, MAX_SF_LEVEL],
+    const SOURCE_FILE_PRIORITY = [[4, 1], [1, MAX_SF_LEVEL], [5, MAX_SF_LEVEL], [4, MAX_SF_LEVEL], [3, 1], [7, 1], [2, 1], [9, MAX_SF_LEVEL], [10, MAX_SF_LEVEL],
         [11, MAX_SF_LEVEL], [3, MAX_SF_LEVEL], [2, MAX_SF_LEVEL], [6, MAX_SF_LEVEL], [7, MAX_SF_LEVEL], [8, MAX_SF_LEVEL], [12, Infinity]];
     /* eslint-enable no-magic-numbers */
     

@@ -250,10 +250,12 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             if (working || repToGain() < 0) continue;
             ns.scriptKill("share.js", HOST);
 
-            ns.tprint("Attempting to bribe faction ", faction);
-            // Try to use corp funds to get the faction rep high enough
-            ns.run("/sing/bribeWithCorpFunds.js", 1, faction, repToGain());
-            await ns.sleep(1^2);
+            if (ns.getPlayer().hasCorporation) {
+                ns.tprint("Attempting to bribe faction ", faction);
+                // Try to use corp funds to get the faction rep high enough
+                ns.run("/sing/bribeWithCorpFunds.js", 1, faction, repToGain());
+                await ns.sleep(1^2);
+            }
 
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             if (!working && repToGain() > 0) {
@@ -275,6 +277,9 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             }
         }
     }
+
+    eval("working = false");
+    eval("awaitingCityFactionInvite = false");
 
     const factionsConsidered = new Set();
     for (const [faction, ] of config.FACTION_PRIOS) {
@@ -414,6 +419,13 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
             if (forceInstall || augsAvailableToQueue < config.MIN_AUGS_TO_CONSIDER_ACHIEVO
                 || !goForAchievo() || (bought.size - preOwnedAugs.length >= MIN_AUGS_FOR_ACHIEVO)) {
+                ns.tprint("Resetting to install augments in: ");
+                /* eslint-disable no-magic-numbers */
+                for (let i = 3; i > 0; i--) {
+                    ns.tprint(i);
+                    await ns.sleep(1e3);
+                }
+                /* eslint-enable no-magic-numbers */
                 ns.singularity.installAugmentations("/sing/sing.js");
             } else {
                 ns.toast(`Waiting on ${MIN_AUGS_FOR_ACHIEVO - (bought.size - preOwnedAugs.length)} more augments (for achievo) before installing!`, "warning", null);
