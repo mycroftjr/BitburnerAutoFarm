@@ -9,11 +9,11 @@ export function main(ns) {
     const donationAmount = Math.ceil(repToGain * BRIBE_TO_REP_RATIO);
     if (ns.corporation.getCorporation().funds * MAX_SPEND_RATIO > donationAmount) {
         if (ns.corporation.bribe(faction, donationAmount)) {
-            ns.tprint(`Bribed ${faction} with $${ns.nFormat(donationAmount, "0a")} successfully!`);
+            ns.print(`Bribed ${faction} with $${ns.nFormat(donationAmount, "0a")} successfully!`);
         } else {
-            ns.tprint("Bribe unsuccessful???");
+            ns.print("Bribe unsuccessful???");
         }
     } else {
-        ns.tprint(`Not enough corp money to comfortably bribe ${faction} with $${ns.nFormat(donationAmount, "0a")}`);
+        ns.print(`Not enough corp money to comfortably bribe ${faction} with $${ns.nFormat(donationAmount, "0a")}`);
     }
 }

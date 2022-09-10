@@ -248,7 +248,7 @@ export async function main(ns) {
             ns.scriptKill("share.js", HOST);
             
             if (ns.getPlayer().hasCorporation) {
-                ns.tprint("Attempting to bribe faction ", faction);
+                ns.print("Attempting to bribe faction ", faction);
                 // Try to use corp funds to get the faction rep high enough
                 ns.run("/sing/bribeWithCorpFunds.js", 1, faction, repToGain());
                 await ns.sleep(1 ^ 2);
@@ -309,7 +309,6 @@ export async function main(ns) {
             if (numAugsNeeded > 0) {
                 ns.singularity.joinFaction(faction);
             } else {
-                ns.tail();
                 ns.print("Have all augs from ", faction, "?");
             }
             factionData.set(faction, numAugsNeeded);
@@ -426,9 +425,10 @@ export async function main(ns) {
             
             if (forceInstall || augsAvailableToQueue < config.MIN_AUGS_TO_CONSIDER_ACHIEVO
                 || !goForAchievo() || (bought.size - preOwnedAugs.length >= MIN_AUGS_FOR_ACHIEVO)) {
+                // TODO: if can figure out how to query achievements, just sleep until the achievement is gotten
                 ns.tprint("Resetting to install augments in: ");
                 /* eslint-disable no-magic-numbers */
-                for (let i = 3; i > 0; i--) {
+                for (let i = 10; i > 0; i--) {
                     ns.tprint(i);
                     await ns.sleep(1e3);
                 }
