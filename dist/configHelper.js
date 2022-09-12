@@ -1,6 +1,6 @@
 
 /** @param {NS} ns */
-export async function parseConfig(ns, filename, struct) {
+export function parseConfig(ns, filename, struct) {
     let json = struct;
     if (ns.fileExists(filename)) {
         json = JSON.parse(ns.read(filename), (k, value) => {
@@ -19,6 +19,6 @@ export async function parseConfig(ns, filename, struct) {
             json[key] = struct[key];
         }
     }
-    await ns.write(filename, JSON.stringify(json, null, "\t"), "w");
+    ns.write(filename, JSON.stringify(json, null, "\t"), "w");
     return json;
 }

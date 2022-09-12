@@ -52,7 +52,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 		/** How often, in seconds, to try to run the `ADDITIONAL_SCRIPTS` */
 		ADDITIONAL_SCRIPTS_PERIOD: 60.0,
 	};
-	const config = await parseConfig(ns, CONFIG_FILE, DEFAULT_CONFIG);
+	const config = parseConfig(ns, CONFIG_FILE, DEFAULT_CONFIG);
 
 	/** @param {string} msg The error message to show */
 	function error(msg: string) {
@@ -141,10 +141,10 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 	const LETTERS = ["G", "W", "H"];  // the main action should never be Share
 	/** The filenames for each hacking type. */
 	const FILES = ["grow.js", "weak.js", "hack.js", "share.js"];
-	await ns.write(FILES[HType.Grow], "export async function main(ns) {\nawait ns.grow(ns.args[0])\n}", "w");
-	await ns.write(FILES[HType.Weaken], "export async function main(ns) {\nawait ns.weaken(ns.args[0])\n}", "w");
-	await ns.write(FILES[HType.Hack], "export async function main(ns) {\nawait ns.hack(ns.args[0])\n}", "w");
-	await ns.write(FILES[HType.Share], "export async function main(ns) {\nwhile(true) {\nawait ns.share()\n}\n}", "w");
+	ns.write(FILES[HType.Grow], "export async function main(ns) {\nawait ns.grow(ns.args[0])\n}", "w");
+	ns.write(FILES[HType.Weaken], "export async function main(ns) {\nawait ns.weaken(ns.args[0])\n}", "w");
+	ns.write(FILES[HType.Hack], "export async function main(ns) {\nawait ns.hack(ns.args[0])\n}", "w");
+	ns.write(FILES[HType.Share], "export async function main(ns) {\nwhile(true) {\nawait ns.share()\n}\n}", "w");
 
 	/** The RAM costs of each HType */
     const RAM_COSTS = FILES.map((file) => ns.getScriptRam(file));
@@ -304,7 +304,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 					hosts.push([info("MR", server), server]);
 				}
 				servers.push(server);
-				await ns.scp(FILES, server);
+				ns.scp(FILES, server);
 				await scanServers(current, server);
 			}
 		}

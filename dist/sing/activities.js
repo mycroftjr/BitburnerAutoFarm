@@ -1,4 +1,5 @@
 import { parseConfig } from "configHelper";
+import { lowestCombatStat } from "/sing/utils";
 
 // Whether we are currently working for reputation
 let working = false;
@@ -31,8 +32,7 @@ export async function main(ns) {
             [
                 "Fulcrum Secret Technologies",
                 "PC Direct-Neural Interface NeuroNet Injector",
-                "PC Direct-Neural Interface Optimization Submodule",
-                "Graphene Bionic Spine Upgrade"  // +60% combat
+                "PC Direct-Neural Interface Optimization Submodule",  // +10% hacking, +75% company rep
             ],
             ["Four Sigma", "PC Direct-Neural Interface", "Neurotrainer III"],
             ["Clarke Incorporated", "Neuronal Densification", "nextSENS Gene Modification"],
@@ -49,13 +49,39 @@ export async function main(ns) {
         /** @type {string[][]} */
         FACTION_PRIOS_COMBAT: [
             ["The Covenant", "SPTN-97 Gene Modification"],
-            ["MegaCorp", "CordiARC Fusion Reactor"],
+            ["Sector-12", "CashRoot Starter Kit"],
             ["New Tokyo", "NutriGen Implant"],
-            ["Volhaven", "DermaForce Particle Barrier"],  // +40% defense
+            ["Tetrads", "Bionic Arms", "HemoRecirculator"],
+            ["The Dark Army", "Graphene Bionic Arms Upgrade", "Nanofiber Weave"],
+            ["The Syndicate", "Bionic Legs", "Bionic Spine", "BrachiBlades", "NEMEAN Subdermal Weave"],
+            ["Speakers for the Dead", "Graphene BrachiBlades Upgrade"],
+            ["The Black Hand", "The Black Hand"],
+            [
+                "Fulcrum Secret Technologies",
+                "Graphene Bionic Spine Upgrade",
+                "Graphene Bionic Legs Upgrade",
+                "Graphene Bone Lacings",
+                "Synfibril Muscle",
+                "Synfibril Heart",
+                "PC Direct-Neural Interface NeuroNet Injector",
+                "PC Direct-Neural Interface Optimization Submodule",
+                "Graphene Bionic Spine Upgrade"  // +60% combat
+            ],
+            ["Four Sigma", "PC Direct-Neural Interface", "Neurotrainer III"],
+            // Volhaven companies
+            ["OmniTek Incorporated", "OmniTek InfoLoad"],
+            ["NWO", "Xanipher", "Power Recirculation Core"],
+            ["Volhaven", "DermaForce Particle Barrier"],
+            
+            ["MegaCorp", "CordiARC Fusion Reactor"],
+            ["Clarke Incorporated", "nextSENS Gene Modification", "FocusWire"],
+            ["KuaiGong International", "Photosynthetic Cells", "HyperSight Corneal Implant"],
+            ["Blade Industries", "Neotra"],
+            ["Ishima", "INFRARET Enhancement"],  // +10% dex, +10% crime$, +25% crime chance
         ],
     };
     /** END OF CONFIGURABLE VALUES */
-    const config = await parseConfig(ns, CONFIG_FILE, DEFAULT_CONFIG);
+    const config = parseConfig(ns, CONFIG_FILE, DEFAULT_CONFIG);
     
     // The maximum hacking level we should ever need
     let maxHackLevel = ns.args[0];
@@ -65,12 +91,30 @@ export async function main(ns) {
     
     // the number of augments to be queued at once to get the achievement
     const MIN_AUGS_FOR_ACHIEVO = 40;
+    const ACHIEVO_SLEEP_MS = 1000;
+    const ACHIEVO_NAME = "It's time to install";
     
     // the lowest karma needed by any faction
     const LOWEST_KARMA = -90;
     
+    // eslint-disable-next-line no-magic-numbers
+    const BLADEBURNER_BNS = [6, 7];
+    const bladeBurnerBn = BLADEBURNER_BNS.includes(bn);
+    const combatBn = bladeBurnerBn;
+    const MIN_COMBAT_STAT = 100;
+    
     function goForAchievo() {
-        return ns.getPlayer().hasCorporation;
+        return !eval("document.achievements").includes(ACHIEVO_NAME) && ns.getPlayer().hasCorporation;
+    }
+    
+    /** @modifies {working} */
+    function considerCrime() {
+        if (eval("ns.heart.break()") <= LOWEST_KARMA && lowestCombatStat(ns) > MIN_COMBAT_STAT)
+            return;
+        if (!ns.scriptRunning("/sing/doCrime.js", HOST)) {
+            ns.run("/sing/doCrime.js", 1, "homicide", LOWEST_KARMA, MIN_COMBAT_STAT);
+        }
+        working = true;
     }
     
     /** Augmentations offered by every faction */
@@ -101,14 +145,19 @@ export async function main(ns) {
      * @type {Map<string, [string, string, number, number]>} */
     // Note: the Company city names are currently unused
     const COMPANY_LOOKUP = new Map([
-        ["Fulcrum Secret Technologies", ["Aevum", "Fulcrum Technologies", FULCRUM_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["ECorp", ["Aevum", "ECorp", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["MegaCorp", ["Sector-12", "MegaCorp", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["KuaiGong International", ["Chongqing", "KuaiGong International", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
         ["Four Sigma", ["Sector-12", "Four Sigma", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
-        ["Bachman & Associates", ["Aevum", "Bachman & Associates", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
         ["NWO", ["Volhaven", "NWO", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
-        ["Clarke Incorporated", ["Aevum", "Clarke Incorporated", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["Blade Industries", ["Sector-12", "Blade Industries", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
         ["OmniTek Incorporated", ["Volhaven", "OmniTek Incorporated", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["Bachman & Associates", ["Aevum", "Bachman & Associates", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["Clarke Incorporated", ["Aevum", "Clarke Incorporated", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["Fulcrum Secret Technologies", ["Aevum", "Fulcrum Technologies", FULCRUM_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
     ]);
-    const JOB_PRIOS = ["software", "software consultant", "it", "security engineer", "network engineer", "business", "business consultant", "security", "agent", "employee"];
+    const HACKING_JOB_PRIOS = ["software", "software consultant", "it", "security engineer", "network engineer", "business", "business consultant", "security", "agent", "employee"];
+    const COMBAT_JOB_PRIOS = ["agent", "security", "business", "business consultant", "software", "software consultant", "it", "security engineer", "network engineer", "employee"];
     
     function assert(cond, ...msg) {
         if (!cond) {
@@ -122,7 +171,8 @@ export async function main(ns) {
      * @param {number} untilRep the reputation to keep working until reached
     */
     function tryWorkForCompany(company, untilRep = Infinity) {
-        for (const job of JOB_PRIOS) {
+        const jobPrios = combatBn ? COMBAT_JOB_PRIOS : HACKING_JOB_PRIOS;
+        for (const job of jobPrios) {
             if (ns.singularity.applyToCompany(company, job)) {
                 ns.scriptKill("/sing/workForFaction.js", HOST);
                 if (ns.getScriptRam("/sing/workForCompany.js") > ns.getServerMaxRam(HOST) - ns.getServerUsedRam(HOST)) {
@@ -281,24 +331,33 @@ export async function main(ns) {
     eval("awaitingCityFactionInvite = false");
     
     const factionsConsidered = new Set();
-    for (const [faction,] of config.FACTION_PRIOS) {
-        factionsConsidered.add(faction);
-        await considerFaction(faction);
+    const factionPrios = combatBn ? config.FACTION_PRIOS_COMBAT : config.FACTION_PRIOS;
+    
+    for (const [faction,] of factionPrios) {
         if (working)
             break;
+        factionsConsidered.add(faction);
+        await considerFaction(faction);
     }
+    
+    if (!working && combatBn)
+        considerCrime();
+    
+    // TODO: if bladeburner BN, do bladeburner stuff
+    
     for (const faction of ns.getPlayer().factions) {
+        if (working)
+            break;
         if (!factionsConsidered.has(faction)) {
             factionsConsidered.add(faction);
             await considerFaction(faction);
         }
-        if (working)
-            break;
     }
     
     if (!working) {
         ns.scriptKill("/sing/workForCompany.js", HOST);
         ns.scriptKill("/sing/workForFaction.js", HOST);
+        ns.scriptKill("/sing/doCrime.js", HOST);
     }
     
     if (config.ACCEPT_ALL_INVITATIONS || (augsToBuyMap.size < MIN_AUGS_FOR_ACHIEVO && augsToBuyMap.size > config.MIN_AUGS_TO_CONSIDER_ACHIEVO)) {
@@ -314,7 +373,7 @@ export async function main(ns) {
             factionData.set(faction, numAugsNeeded);
         }
     }
-    await ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
+    ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
     
     if (forceInstall || augsToBuyMap.size && (!working || (goForAchievo() && augsToBuyMap.size > MIN_AUGS_FOR_ACHIEVO))) {
         // If we aren't working towards any augmentations and have augs to buy/install, let's do so now
@@ -359,12 +418,14 @@ export async function main(ns) {
             && (!goForAchievo() || augsAvailableToQueue < config.MIN_AUGS_TO_CONSIDER_ACHIEVO || augsAvailableToQueue >= MIN_AUGS_FOR_ACHIEVO))) {
             // Liquidate (sell) all stocks
             ns.scriptKill("stockBot.js", HOST);
-            for (const sym of ns.stock.getSymbols()) {
-                ns.stock.sellStock(sym, Infinity);
-                try {
-                    ns.stock.sellShort(sym, Infinity);
+            if (ns.stock.hasTIXAPIAccess()) {
+                for (const sym of ns.stock.getSymbols()) {
+                    ns.stock.sellStock(sym, Infinity);
+                    try {
+                        ns.stock.sellShort(sym, Infinity);
+                    }
+                    catch { }
                 }
-                catch { }
             }
             
             /** @param {string} faction
@@ -421,18 +482,14 @@ export async function main(ns) {
             for (const faction of ns.getPlayer().factions) {
                 factionData.set(faction, getUnownedAugs(faction).length - COMMON_AUGS.length);
             }
-            await ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
+            ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
             
             if (forceInstall || augsAvailableToQueue < config.MIN_AUGS_TO_CONSIDER_ACHIEVO
                 || !goForAchievo() || (bought.size - preOwnedAugs.length >= MIN_AUGS_FOR_ACHIEVO)) {
-                // TODO: if can figure out how to query achievements, just sleep until the achievement is gotten
-                ns.tprint("Resetting to install augments in: ");
-                /* eslint-disable no-magic-numbers */
-                for (let i = 10; i > 0; i--) {
-                    ns.tprint(i);
-                    await ns.sleep(1e3);
+                while (bought.size - preOwnedAugs.length >= MIN_AUGS_FOR_ACHIEVO && !eval("documents.achievements").includes(ACHIEVO_NAME)) {
+                    ns.print("Waiting for 'queue 40 augments' achievement");
+                    await ns.sleep(ACHIEVO_SLEEP_MS);
                 }
-                /* eslint-enable no-magic-numbers */
                 ns.singularity.installAugmentations("/sing/sing.js");
             } else {
                 ns.toast(`Waiting on ${MIN_AUGS_FOR_ACHIEVO - (bought.size - preOwnedAugs.length)} more augments (for achievo) before installing!`, "warning", null);
@@ -496,11 +553,6 @@ export async function main(ns) {
                 }
             }
         }
-        if (eval("ns.heart.break()") > LOWEST_KARMA) {
-            if (!ns.scriptRunning("doCrime.js", HOST)) {
-                ns.run("doCrime.js", 1, "homicide", LOWEST_KARMA);
-                return;
-            }
-        }
+        considerCrime();
     }
 }
