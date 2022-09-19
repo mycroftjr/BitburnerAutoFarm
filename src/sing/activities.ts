@@ -103,7 +103,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     const BLADEBURNER_BNS = [6, 7];
     const bladeBurnerBn = BLADEBURNER_BNS.includes(bn);
     const combatBn = bladeBurnerBn;
-    const MIN_COMBAT_STAT = 100;
+    const MIN_COMBAT_STAT = 300;
+    const CHARISMA_TARG = 250;
 
     function goForAchievo() {
         return !(eval("document.achievements") as string[]).includes(ACHIEVO_NAME) && ns.getPlayer().hasCorporation;
@@ -176,6 +177,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         for (const job of jobPrios) {
             if (ns.singularity.applyToCompany(company, job)) {
                 ns.scriptKill("/sing/workForFaction.js", HOST);
+                ns.scriptKill("/sing/doCrime.js", HOST);
                 if (ns.getScriptRam("/sing/workForCompany.js") > ns.getServerMaxRam(HOST) - ns.getServerUsedRam(HOST)) {
                     ns.scriptKill("share.js", HOST);
                 }
@@ -241,6 +243,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
      * @modifies {awaitingCityFactionInvite}
      */
     async function considerFaction(faction: string) {
+        if (config.FACTION_BLACKLIST.includes(faction)) return;
         const augs = getUnownedAugs(faction);
         factionData.set(faction, augs.length - COMMON_AUGS.length);
         if (augs.length <= COMMON_AUGS.length) {
@@ -308,14 +311,15 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             if (!working && repToGain() > 0) {
-                if (ns.isRunning("/sing/workForFaction.js", HOST, faction, repNeeded)) {
+                if (ns.isRunning("/sing/workForFaction.js", HOST, faction, repNeeded, combatBn, CHARISMA_TARG)) {
                     working = true;
                 } else {  // run it
                     // don't work towards augs we can't get the prereqs for yet
                     if (!haveOrCanBuyPrereqs(aug)) continue;
 
                     ns.scriptKill("/sing/workForFaction.js", HOST);
-                    if (ns.run("/sing/workForFaction.js", 1, faction, repNeeded)) {
+                    ns.scriptKill("/sing/doCrime.js", HOST);
+                    if (ns.run("/sing/workForFaction.js", 1, faction, repNeeded, combatBn, CHARISMA_TARG)) {
                         ns.tprint(`Working towards aug ${aug} from ${faction} (${ns.nFormat(repNeeded, "0a")} rep needed)`);
                         working = true;
                     } else {
