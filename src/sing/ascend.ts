@@ -16,7 +16,6 @@ export function main(ns: DeepReadonly<NS>) {
         const lvl = (file?.lvl ?? 0) + (p[0] === bn ? 1 : 0);
         if (lvl < p[1]) {
             if (ns.hasRootAccess("w0r1d_d43m0n")) {
-                ns.tail();
                 ns.singularity.destroyW0r1dD43m0n(p[0], "/sing/sing.js");
             }
             break;

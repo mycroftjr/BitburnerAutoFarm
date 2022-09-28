@@ -2,6 +2,7 @@ import type { NS } from "@ns";
 import type { DeepReadonly } from "ts-essentials";
 import { parseConfig } from "configHelper";
 import { lowestCombatStat } from "/sing/utils";
+import { haveBladeburnerApiAccess } from "/bladeburner/bladeburner";
 
 // Whether we are currently working for reputation
 let working = false;
@@ -58,6 +59,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             ["The Syndicate", "Bionic Legs", "Bionic Spine", "BrachiBlades", "NEMEAN Subdermal Weave"],  // +60% agi; +15% combat; +15% str & def; +120% def
             ["Speakers for the Dead", "Graphene BrachiBlades Upgrade"],  // +40% str & def
             ["The Black Hand", "The Black Hand"],  // +10% hacking, +2% all speed, +10% hacking power, +15% str & dex
+            // TODO: add some hacking aug factions with security work before this? need like 3x the hacking level for the backdoor
             [
                 "Fulcrum Secret Technologies",
                 "Graphene Bionic Spine Upgrade",  // +60% combat
@@ -114,6 +116,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     function considerCrime() {
         if (eval("ns.heart.break()") <= LOWEST_KARMA && lowestCombatStat(ns) > MIN_COMBAT_STAT) return;
         if (!ns.scriptRunning("/sing/doCrime.js", HOST)) {
+            ns.singularity.stopAction();
             ns.run("/sing/doCrime.js", 1, "homicide", LOWEST_KARMA, MIN_COMBAT_STAT);
         }
         working = true;
@@ -161,6 +164,12 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     const HACKING_JOB_PRIOS = ["software", "software consultant", "it", "security engineer", "network engineer", "business", "business consultant", "security", "agent", "employee"];
     const COMBAT_JOB_PRIOS = ["agent", "security", "business", "business consultant", "software", "software consultant", "it", "security engineer", "network engineer", "employee"];
 
+    // Factions that you cannot work for (at least in the usual way)
+    const NO_WORK_FACTIONS = ["Shadows of Anarchy", "Bladeburners"];
+
+    // do we have the aug to perform bladeburner actions alongside normal ones?
+    const haveBladeburnerAug = ns.singularity.getOwnedAugmentations(false).includes("");
+
     function assert(cond: unknown, ...msg: DeepReadonly<Parameters<typeof ns.tprint>>) {
         if (!cond) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -178,6 +187,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             if (ns.singularity.applyToCompany(company, job)) {
                 ns.scriptKill("/sing/workForFaction.js", HOST);
                 ns.scriptKill("/sing/doCrime.js", HOST);
+                if (!haveBladeburnerAug) ns.scriptKill("/bladeburner/bladeburner.js", HOST);
                 if (ns.getScriptRam("/sing/workForCompany.js") > ns.getServerMaxRam(HOST) - ns.getServerUsedRam(HOST)) {
                     ns.scriptKill("share.js", HOST);
                 }
@@ -234,21 +244,23 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
      * @param {string} aug */
     function haveOrCanBuyPrereqs(aug: string) {
         const prereqs = ns.singularity.getAugmentationPrereq(aug);
-        return !prereqs.filter((prereq) => !myAugs.includes(prereq) && !augsToBuyMap.has(prereq)).length;
+        return !prereqs.find((prereq) => !myAugs.includes(prereq) && !augsToBuyMap.has(prereq));
     }
 
     /** Examine the faction for any augs we might want.
      * @param {string} faction 
      * @modifies {working}
      * @modifies {awaitingCityFactionInvite}
+     * @returns whether or not more work can be done for the faction in the current life
      */
     async function considerFaction(faction: string) {
-        if (config.FACTION_BLACKLIST.includes(faction)) return;
+        if (config.FACTION_BLACKLIST.includes(faction)) return false;
+        if (NO_WORK_FACTIONS.includes(faction)) return false;
         const augs = getUnownedAugs(faction);
         factionData.set(faction, augs.length - COMMON_AUGS.length);
         if (augs.length <= COMMON_AUGS.length) {
             ns.print("Have all augs from ", faction, "?");
-            return;
+            return false;
         }
         if (ns.singularity.checkFactionInvitations().includes(faction)) {
             ns.singularity.joinFaction(faction);
@@ -262,23 +274,27 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 if (!working && ns.getPlayer().skills.hacking >= hackingLevelNeeded && ns.singularity.getCompanyRep(company) < repNeeded) {
                     // can't use ns.isRunning() as job can't always be predicted
                     if (ns.scriptRunning("/sing/workForCompany.js", HOST)) {
+                        ns.scriptKill("/sing/workForFaction.js", HOST);
+                        ns.scriptKill("/sing/doCrime.js", HOST);
+                        if (!haveBladeburnerAug) ns.scriptKill("/bladeburner/bladeburner.js", HOST);
                         working = true;
                     } else {  // run it
                         ns.singularity.quitJob(company);
                         working = tryWorkForCompany(company, repNeeded);
                     }
-                    if (working) return;
+                    if (working) return true;
                     else {
                         ns.tail();
                         ns.print("Failed to work for ", company, "?!");
                     }
                 }
+                // TODO: stop the workForCompany work early if faction inv comes in (i.e. backdoor reduced rep requirement)
             } else if (CITY_FACTIONS.has(faction) && !awaitingCityFactionInvite) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 const [neededCity, neededMoney, neededHackingLevel, enemies] = CITY_FACTIONS.get(faction)!;
                 maxHackLevel = Math.max(maxHackLevel, neededHackingLevel);
                 if (enemies.filter((enemy) => ns.getPlayer().factions.includes(enemy)).length)
-                    return;
+                    return false;
                 if (ns.getPlayer().money >= neededMoney + AIRFARE && ns.getPlayer().skills.hacking >= neededHackingLevel) {
                     if (neededCity === city || ns.singularity.travelToCity(neededCity)) {
                         city = neededCity;
@@ -289,7 +305,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         }
         if (working || !ns.getPlayer().factions.includes(faction)) {
             ns.print(faction, " - ", working ? "working" : "not in faction yet");
-            return;
+            return true;
         }
 
         ns.print(faction);
@@ -297,7 +313,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         for (const aug of augs) {
             if (COMMON_AUGS.includes(aug)) continue;
             const repNeeded = ns.singularity.getAugmentationRepReq(aug);
-            const repToGain = () => { return repNeeded - ns.singularity.getFactionRep(faction) };
+            const repToGain = () => repNeeded - ns.singularity.getFactionRep(faction);
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             if (working || repToGain() < 0) continue;
             ns.scriptKill("share.js", HOST);
@@ -319,6 +335,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
                     ns.scriptKill("/sing/workForFaction.js", HOST);
                     ns.scriptKill("/sing/doCrime.js", HOST);
+                    if (!haveBladeburnerAug) ns.scriptKill("/bladeburner/bladeburner.js", HOST);
                     if (ns.run("/sing/workForFaction.js", 1, faction, repNeeded, combatBn, CHARISMA_TARG)) {
                         ns.tprint(`Working towards aug ${aug} from ${faction} (${ns.nFormat(repNeeded, "0a")} rep needed)`);
                         working = true;
@@ -329,6 +346,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 if (working) break;
             }
         }
+        return working;
     }
 
     eval("working = false");
@@ -336,6 +354,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
     const factionsConsidered = new Set();
     const factionPrios = combatBn ? config.FACTION_PRIOS_COMBAT : config.FACTION_PRIOS;
+    const factionUnprios = combatBn ? config.FACTION_PRIOS : config.FACTION_PRIOS_COMBAT;
 
     for (const [faction, ] of factionPrios) {
         if (working) break;
@@ -345,7 +364,15 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
     if (!working && combatBn) considerCrime();
 
-    // TODO: if bladeburner BN, do bladeburner stuff
+    // TODO: do bladeburner stuff
+    if (haveBladeburnerApiAccess(ns)) {
+        if (!working || haveBladeburnerAug) {
+            if (!working) ns.singularity.stopAction();
+            ns.run("/bladeburner/bladeburner.js");
+            if (!working && !haveBladeburnerAug)
+                working = true;
+        }
+    }
 
     for (const faction of ns.getPlayer().factions) {
         if (working) break;
@@ -359,6 +386,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         ns.scriptKill("/sing/workForCompany.js", HOST);
         ns.scriptKill("/sing/workForFaction.js", HOST);
         ns.scriptKill("/sing/doCrime.js", HOST);
+        if (!haveBladeburnerAug) ns.scriptKill("/bladeburner/bladeburner.js", HOST);
     }
 
     if (config.ACCEPT_ALL_INVITATIONS || (augsToBuyMap.size < MIN_AUGS_FOR_ACHIEVO && augsToBuyMap.size > config.MIN_AUGS_TO_CONSIDER_ACHIEVO)) {
@@ -376,15 +404,23 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     ns.write("/sing/factionData.txt", JSON.stringify(Array.from(factionData.entries())), "w");
 
     if (forceInstall || augsToBuyMap.size && (!working || (goForAchievo() && augsToBuyMap.size > MIN_AUGS_FOR_ACHIEVO))) {
+        // TODO: attempt this less often than the other activities
+
         // If we aren't working towards any augmentations and have augs to buy/install, let's do so now
         for (const faction of ns.getPlayer().factions) {
+            function cantGetAugment(aug: string) {
+                return !haveOrCanBuyPrereqs(aug) && ns.singularity.getFactionRep(faction) < ns.singularity.getAugmentationRepReq(aug);
+            }
             const augs = getUnownedAugs(faction);
-            for (const aug of augs) {
-                assert(ns.singularity.getFactionRep(faction) >= ns.singularity.getAugmentationRepReq(aug) && haveOrCanBuyPrereqs(aug),
-                    `Found aug ${aug} under faction ${faction} that we don't have the reputation for, but aren't working towards!`);
-                const price = ns.singularity.getAugmentationPrice(aug);
-                if ((augsToBuyMap.get(aug)?.price ?? Infinity) > price) {
-                    augsToBuyMap.set(aug, {price, faction});
+            if (NO_WORK_FACTIONS.includes(faction)) {
+                assert(augs.find(cantGetAugment), `Found aug(s) under faction ${faction} that we don't have the reputation for, but aren't working towards!`);
+            } else {
+                for (const aug of augs) {
+                    assert(!cantGetAugment(aug), `Found aug ${aug} under faction ${faction} that we don't have the reputation for, but aren't working towards!`);
+                    const price = ns.singularity.getAugmentationPrice(aug);
+                    if ((augsToBuyMap.get(aug)?.price ?? Infinity) > price) {
+                        augsToBuyMap.set(aug, {price, faction});
+                    }
                 }
             }
         }
@@ -426,6 +462,9 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                     } catch {}
                 }
             }
+            
+            /** @type {Set<string>} */
+            const bought = new Set<string>(myAugs);
 
             /** @param {string} faction
              * @param {string} aug */
@@ -438,8 +477,6 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 return success;
             }
 
-            /** @type {Set<string>} */
-            const bought = new Set<string>(myAugs);
             while (augsToBuy.length) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 const [, aug, faction] = augsToBuy.pop()!;
@@ -487,11 +524,18 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 }
                 ns.singularity.installAugmentations("/sing/sing.js");
             } else {
+                // TODO: don't spam this
                 ns.toast(`Waiting on ${MIN_AUGS_FOR_ACHIEVO - (bought.size - preOwnedAugs.length)} more augments (for achievo) before installing!`, "warning", null);
             }
         } else if (augsToBuy.length && augsToBuy[augsToBuy.length - 1][0] > ns.getPlayer().money) {
             ns.print("Cannot afford most expensive purchasable augment yet!");
         }
+    }
+
+    for (const [faction, ] of factionUnprios) {
+        if (working) break;
+        factionsConsidered.add(faction);
+        await considerFaction(faction);
     }
 
     if (!working) {

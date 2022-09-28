@@ -3,6 +3,7 @@ import type { DeepReadonly } from "ts-essentials";
 
 /** @param {NS} ns */
 export async function main(ns: DeepReadonly<NS>): Promise<void> {
+    ns.disableLog("disableLog");
     ns.disableLog("sleep");
     const MILLIS_TO_WAIT = 5e3;
     /** @type {string} */

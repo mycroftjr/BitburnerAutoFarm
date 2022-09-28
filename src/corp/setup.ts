@@ -4,6 +4,7 @@ import type { DeepReadonly } from "ts-essentials";
 /** Based on https://docs.google.com/document/d/e/2PACX-1vTzTvYFStkFjQut5674ppS4mAhWggLL5PEQ_IbqSRDDCZ-l-bjv0E6Uo04Z-UfPdaQVu4c84vawwq8E/pub */
 /** @param {NS} ns */
 export async function main(ns: DeepReadonly<NS>): Promise<void> {
+    ns.disableLog("disableLog");
     ns.disableLog("sleep");
     ns.disableLog("asleep");
 
@@ -407,5 +408,6 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         ns.atExit(() => ns.run("/corp/makeProducts.js", 1));
     }
 
+    await setupDiv1();
     await setupDiv2();
 }

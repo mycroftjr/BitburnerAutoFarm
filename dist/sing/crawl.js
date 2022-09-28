@@ -6,6 +6,8 @@ export async function main(ns) {
         "fulcrumassets",
         "rothman-uni", "summit-uni", "zb-institute",
         "iron-gym", "powerhouse-fitness", "crush-fitness", "millenium-fitness", "snap-fitness",
+        // backdooring these reduce the company rep requirement to join the faction by 100e3 (https://github.com/danielyxie/bitburner/blob/dev/src/PersonObjects/Player/PlayerObjectGeneralMethods.ts#L862)
+        "ecorp", "megacorp", "b-and-a", "blade", "nwo", "clarkinc", "omnitek", "4sigma", "kuai-gong", "fulcrumtech",
     ];
     
     const rootHost = ns.getHostname();
@@ -48,14 +50,15 @@ export async function main(ns) {
                 steps = dir.get(server);
                 if (!steps)
                     continue;
+                const old = ns.singularity.getCurrentServer();
                 for (const step of steps) {
                     ns.singularity.connect(step);
                 }
                 await ns.singularity.installBackdoor();
+                ns.singularity.connect(old);
                 numUnbackdoored--;
             }
         }
-        ns.singularity.connect("home");
         if (numUnbackdoored)
             await ns.sleep(MILLIS_TO_WAIT_FOR_HACKING_LEVELS);
     }

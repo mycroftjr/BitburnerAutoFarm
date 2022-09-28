@@ -216,11 +216,19 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
 	/** Truncates the given server name for display 
 	 * @param {string} s */
-	function str(s: string) {
+	function sname(s: string) {
 		if (s.length <= config.MIN_SERVER_CHARACTERS + 1) {
 			return s;
 		}
 		return s.substring(0, config.MIN_SERVER_CHARACTERS) + "…";
+	}
+
+	/** Does `ns.print` of the `prefix` then `str`, padded in the middle by `pad` such that the line length is `OUTPUT_WIDTH`.
+	 * @param {string} prefix
+	 * @param {string} str 
+	 * @param {string} pad */
+	function pprint(prefix: string, pad: string, str: string) {
+		ns.print(prefix, str.padStart(config.OUTPUT_WIDTH - prefix.length, pad));
 	}
 
 	/** Prints a server status line.
@@ -230,14 +238,6 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 	 * @param {number} MM The maximum amount of money the server can contain */
 	function printServerLine(action: string, name: string, MA: number, MM: number) {
 		pprint(`║ ${action} ║ ${name}`, " ", `${ns.nFormat(MA, "0a")} / ${ns.nFormat(MM, "0a")} : ${ns.nFormat(MA / MM, "0%")} ║`);
-	}
-
-	/** Does `ns.print` of the `prefix` then `str`, padded in the middle by `pad` such that the line length is `OUTPUT_WIDTH`.
-	 * @param {string} prefix
-	 * @param {string} str 
-	 * @param {string} pad */
-	function pprint(prefix: string, pad: string, str: string) {
-		ns.print(prefix, str.padStart(config.OUTPUT_WIDTH - prefix.length, pad));
 	}
 
 	function log() {
@@ -250,7 +250,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 		const tmp = targets.slice(0, config.NUM_HIGH_PROFIT_TARGS);
 		pprint(`║ ${cycle[cycle[0]]} ║ HIGH PROFIT`, " ", "BALANCE     ║");
 		for (const t of tmp) {
-			printServerLine(act[t[1]], str(t[1]), info("MA", t[1]), info("MM", t[1]));
+			printServerLine(act[t[1]], sname(t[1]), info("MA", t[1]), info("MM", t[1]));
 		}
 		pprint("╠═══╩", "═", "╣");
 		pprint(`║ EXE ${exes.length}/5 ║ HOSTS ${hosts.length} ║ TARGETS ${targets.length}`, " ", "║");
@@ -277,7 +277,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 			pprint(`║ ${cycle[cycle[0]]} ║ LOWER PROFIT`, " ", "BALANCE     ║");
 			const tmp = targets.slice(config.NUM_HIGH_PROFIT_TARGS, config.MAX_LINES - ns.getScriptLogs().length);
 			for (const t of tmp) {
-				printServerLine(act[t[1]], str(t[1]), info("MA", t[1]), info("MM", t[1]));
+				printServerLine(act[t[1]], sname(t[1]), info("MA", t[1]), info("MM", t[1]));
 			}
 		} else {
 			pprint("╚", "═", "╝");

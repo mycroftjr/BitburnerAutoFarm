@@ -7,6 +7,7 @@ const SLEEP_MS = 1e3;
 
 /** @param {NS} ns */
 export async function main(ns: DeepReadonly<NS>): Promise<void> {
+    ns.disableLog("disableLog");
     ns.disableLog("sleep");
     while (true) {
         try {
@@ -34,7 +35,6 @@ async function mainHelper(ns: DeepReadonly<NS>) {
 
     const MARKET_TAS = ["Market-TA.I", "Market-TA.II"];
 
-    const SLEEP_MS = 1e3;
     const RATIO_TO_INVEST = 0.1;
     const PRODUCT_PREFIX = "Tobacco v";
     const FAKE_PRODUCT_NAME = `${PRODUCT_PREFIX}0`;

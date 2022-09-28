@@ -1,6 +1,7 @@
 
 /** @param {NS} ns */
 export async function main(ns) {
+    ns.disableLog("disableLog");
     ns.disableLog("sleep");
     const MILLIS_TO_WAIT = 5e3;
     /** @type {string} */
