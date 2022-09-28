@@ -50,7 +50,7 @@ export async function main(ns) {
         /** @type {string[][]} */
         FACTION_PRIOS_COMBAT: [
             ["The Covenant", "SPTN-97 Gene Modification"],
-            ["Sector-12", "CashRoot Starter Kit"],
+            ["Ishima", "INFRARET Enhancement"],
             ["New Tokyo", "NutriGen Implant"],
             ["Tetrads", "Bionic Arms", "HemoRecirculator"],
             ["The Dark Army", "Graphene Bionic Arms Upgrade", "Nanofiber Weave"],
@@ -78,8 +78,7 @@ export async function main(ns) {
             ["MegaCorp", "CordiARC Fusion Reactor"],
             ["Clarke Incorporated", "nextSENS Gene Modification", "FocusWire"],
             ["KuaiGong International", "Photosynthetic Cells", "HyperSight Corneal Implant"],
-            ["Blade Industries", "Neotra"],
-            ["Ishima", "INFRARET Enhancement"],  // +10% dex, +10% crime$, +25% crime chance
+            ["Blade Industries", "Neotra"],  // +55% str & def
         ],
     };
     /** END OF CONFIGURABLE VALUES */

@@ -52,7 +52,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         /** @type {string[][]} */
         FACTION_PRIOS_COMBAT: [
             ["The Covenant", "SPTN-97 Gene Modification"],  // +15% hacking, +75% combat
-            ["Sector-12", "CashRoot Starter Kit"],  // start with $1m
+            ["Ishima", "INFRARET Enhancement"],  // +5% agi, +10% crime$, +25% crime chance; Augmented Targeting 1&2; Combat Rib 1&2; +20% company rep; +20% char; +5% dex&agi
             ["New Tokyo", "NutriGen Implant"],  // +20% combat EXP
             ["Tetrads", "Bionic Arms", "HemoRecirculator"],  // +30% str & dex, prereq to Graphene Bionic Arms Upgrade from Dark Army; +8% combat
             ["The Dark Army", "Graphene Bionic Arms Upgrade", "Nanofiber Weave"],  // +85% str & dex; +12% str & def; Augmented Targeting; Combat Ribs
@@ -81,7 +81,6 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             ["Clarke Incorporated", "nextSENS Gene Modification", "FocusWire"],  // +20% all skills; +15% combat exp
             ["KuaiGong International", "Photosynthetic Cells", "HyperSight Corneal Implant"],  // +40% str, def & agi; +40% dex
             ["Blade Industries", "Neotra"],  // +55% str & def
-            ["Ishima", "INFRARET Enhancement"],  // +10% dex, +10% crime$, +25% crime chance
         ],
     };
     /** END OF CONFIGURABLE VALUES */
