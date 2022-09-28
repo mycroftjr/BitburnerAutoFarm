@@ -55,6 +55,7 @@ module.exports = {
         "@typescript-eslint/no-unnecessary-condition": ["warn", { "allowConstantLoopConditions": true }],
         "@typescript-eslint/no-unnecessary-qualifier": "warn",
         "@typescript-eslint/no-unnecessary-type-arguments": "error",
+        "@typescript-eslint/no-unused-expressions": "warn",
         "no-use-before-define": "off",
         "@typescript-eslint/no-use-before-define": ["error", { "functions": false }],
         "@typescript-eslint/no-useless-empty-export": "warn",

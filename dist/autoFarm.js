@@ -35,7 +35,7 @@ export async function main(ns) {
         /** The maximum 'minimum security level' of a server to even consider targetting */
         MAX_MSL: 100,
         /** The amount of RAM to keep free on the host running this script, not including this script's direct usage */
-        KEEP_FREE: 50,
+        KEEP_FREE: 75,
         /** Whether to `share()` your remaining RAM with your factions, boosting hacking contracts */
         SHARE_REMAINING_RAM: true,
         /** The max proportion (denominator) of money to spend on any Hacknet node/upgrade */

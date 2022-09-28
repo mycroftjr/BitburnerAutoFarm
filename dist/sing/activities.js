@@ -102,7 +102,7 @@ export async function main(ns) {
     // eslint-disable-next-line no-magic-numbers
     const BLADEBURNER_BNS = [6, 7];
     const bladeBurnerBn = BLADEBURNER_BNS.includes(bn);
-    const combatBn = bladeBurnerBn;
+    const combatBn = bladeBurnerBn || (bn == 2);
     const MIN_COMBAT_STAT = 300;
     const CHARISMA_TARG = 250;
     

@@ -7,7 +7,6 @@ export function haveBladeburnerApiAccess(ns) {
     let access = false;
     try {
         access = ns.bladeburner.joinBladeburnerDivision();
-        ns.bladeburner.joinBladeburnerFaction();
     }
     catch { }
     return access;
@@ -21,6 +20,11 @@ export function bladeburnerStep(ns) {
     const OVERCLOCK_MAX_LEVEL = 90;
     // The softcap of the Datamancer skill's level
     const DATAMANCER_SOFT_CAP = 5;  // TODO: apply math instead of guessing
+    
+    try {
+        ns.bladeburner.joinBladeburnerFaction();
+    }
+    catch { }
     
     function getIntelEffectiveness(name) {
         // From https://github.com/danielyxie/bitburner/blob/dev/src/Bladeburner/Bladeburner.tsx, search "PopulationEstimate"
@@ -58,10 +62,10 @@ export function bladeburnerStep(ns) {
     const citiesByChaos = CITIES
         .map(c => [ns.bladeburner.getCityChaos(c), c])
         .sort(([chaosA,], [chaosB,]) => chaosA - chaosB);
-    const communitiesByChaos = citiesByChaos.filter(([, c]) => ns.bladeburner.getCityCommunities(c) >= 1);
     
     // TODO: only move for communities if the rep gain of Raid over the next best is more than the increase in Chaos
     /*
+    const communitiesByChaos = citiesByChaos.filter(([, c]) => ns.bladeburner.getCityCommunities(c) >= 1);
     if (communitiesByChaos.length) {
         // If Synthoid communities are eradicated here but exist elsewhere, go to least Chaotic city where there are any communities
         if ((ns.bladeburner.getCityCommunities(city()) == 0 || communitiesByChaos[0][0] * CHAOS_RATIO < chaos()) && communitiesByChaos[0][1] != city()) {
@@ -202,7 +206,7 @@ export function bladeburnerStep(ns) {
                         return time;
                 }
             }
-            ns.print("actions by rep gain: ", actionsByRep);
+            ns.print("actions: ", actionsByRep);
             for (const [, time, type, name] of actionsByRep) {
                 if (ns.bladeburner.startAction(type, name))
                     return time;

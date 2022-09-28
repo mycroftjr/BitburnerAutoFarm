@@ -104,7 +104,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     // eslint-disable-next-line no-magic-numbers
     const BLADEBURNER_BNS = [6, 7];
     const bladeBurnerBn = BLADEBURNER_BNS.includes(bn);
-    const combatBn = bladeBurnerBn;
+    const combatBn = bladeBurnerBn || (bn == 2);
     const MIN_COMBAT_STAT = 300;
     const CHARISMA_TARG = 250;
 
@@ -462,7 +462,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                     } catch {}
                 }
             }
-            
+
             /** @type {Set<string>} */
             const bought = new Set<string>(myAugs);
 

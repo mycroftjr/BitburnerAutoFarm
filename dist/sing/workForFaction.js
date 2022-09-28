@@ -16,7 +16,7 @@ export async function main(ns) {
             JOB_PRIOS = ["field", "security", "hacking"];
         }
     } else {
-        ["hacking", "field", "security"];
+        JOB_PRIOS = ["hacking", "field", "security"];
     }
     
     while (ns.singularity.getFactionRep(faction) < repTarg) {
