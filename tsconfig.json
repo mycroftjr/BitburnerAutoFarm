@@ -6,8 +6,8 @@
     "src/**/*",
   ],
   "compilerOptions": {
-    "module": "ESNext",
-    "target": "ESNext",
+    "module": "esnext",
+    "target": "esnext",
     "moduleResolution": "node",
     "noImplicitReturns": true,
     "noImplicitThis": true,
@@ -27,7 +27,7 @@
       ]
     },
     "skipLibCheck": true,
-    "keyofStringsOnly": true,
+    // "keyofStringsOnly": true,
     // Output formatting
     "preserveWatchOutput": false,
     "pretty": true,

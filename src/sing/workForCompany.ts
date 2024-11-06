@@ -1,12 +1,12 @@
-import type { NS } from "@ns";
+import type { NS, CompanyName, JobField } from "@ns";
 import type { DeepReadonly } from "ts-essentials";
 
 /** @param {NS} ns */
 export async function main(ns: DeepReadonly<NS>): Promise<void> {
     ns.disableLog("ALL");
     const MILLIS_TO_WAIT = 5000;
-    const company = ns.args[0] as string;
-    const job = ns.args[1] as string;
+    const company = ns.args[0] as CompanyName;
+    const job = ns.args[1] as JobField;
     const repTarg = ns.args[2] as number;
     while (ns.singularity.getCompanyRep(company) < repTarg) {
         const focus = ns.singularity.isBusy() && ns.singularity.isFocused();

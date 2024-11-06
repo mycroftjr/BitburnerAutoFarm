@@ -1,35 +1,29 @@
-
 /** Based on https://docs.google.com/document/d/e/2PACX-1vTzTvYFStkFjQut5674ppS4mAhWggLL5PEQ_IbqSRDDCZ-l-bjv0E6Uo04Z-UfPdaQVu4c84vawwq8E/pub */
 /** @param {NS} ns */
 export async function main(ns) {
     ns.disableLog("disableLog");
     ns.disableLog("sleep");
     ns.disableLog("asleep");
-    
     const HOME_CITY = "Sector-12";
     const CORP_NAME = "Corp";
     const DIV1 = {
         type: "Agriculture",
         name: "Agriculture",
-        mats: ["Water", "Energy"],
+        mats: ["Water", "Chemicals"],
         prods: ["Plants", "Food"],
     };
     const DIV2 = {
         type: "Tobacco",
         name: "Tobacco",
-        mats: ["Plants", "Energy"],
+        mats: ["Plants"],
     };
-    const CITIES = ["Sector-12", "Aevum", "Chongqing", "Ishima", "New Tokyo", "Volhaven"];
     const CENT = 100;
-    
     const FULL_AUTO = ns.args.length <= 0 || ns.args[0] != "MANUAL";
-    
-    const bn = ns.getPlayer().bitNodeN;
+    const bn = ns.getResetInfo().currentNode;
     const FREE_CORP_BN = 3;
     // The optimal amount of seed money for minimal manual work
     const SEED_MONEY = 250e9;
     const WAREHOUSE_SECS_PER_TICK = 10;
-    
     const INVEST_INFO = [
         {
             profit: 1.5e6,
@@ -44,44 +38,40 @@ export async function main(ns) {
             min: 5e12
         }
     ];
-    
-    if (!ns.getPlayer().hasCorporation) {
+    if (!ns.corporation.hasCorporation()) {
         if (bn == FREE_CORP_BN) {
             if (ns.getPlayer().city != HOME_CITY)
                 ns.singularity.travelToCity(HOME_CITY);
             ns.corporation.createCorporation(CORP_NAME, false);
-        } else {
+        }
+        else {
             ns.tail();
             ns.print("Please go to Cityhall in ", HOME_CITY, " and self-fund a corporation using at least $", ns.nFormat(SEED_MONEY, "0a"));
         }
     }
-    if (!ns.getPlayer().hasCorporation)
+    if (!ns.corporation.hasCorporation())
         return;
     const corp = ns.corporation.getCorporation();
-    
     /** Buys the given one-time upgrade for the corp, if we don't already have it. */
     function buyUpgrade(upgrade) {
-        if (ns.corporation.hasUnlockUpgrade(upgrade))
+        if (ns.corporation.hasUnlock(upgrade))
             return true;
-        if (ns.corporation.getUnlockUpgradeCost(upgrade) > corp.funds) {
+        if (ns.corporation.getUnlockCost(upgrade) > corp.funds) {
             ns.tail();
             ns.print("Failed to buy upgrade ", upgrade);
             return false;
         }
-        ns.corporation.unlockUpgrade(upgrade);
-        return ns.corporation.hasUnlockUpgrade(upgrade);
+        ns.corporation.purchaseUnlock(upgrade);
+        return ns.corporation.hasUnlock(upgrade);
     }
-    
     if (corp.funds >= SEED_MONEY) {
         if (!buyUpgrade("Warehouse API"))
             return;
         if (!buyUpgrade("Office API"))
             return;
     }
-    
     if (!buyUpgrade("Smart Supply"))
         return;
-    
     const INIT_UPGRADES = ["FocusWires", "Neural Accelerators", "Speech Processor Implants", "Nuoptimal Nootropic Injector Implants", "Smart Factories"];
     for (const upgrade of INIT_UPGRADES) {
         while (ns.corporation.getUpgradeLevel(upgrade) < 2) {
@@ -89,9 +79,8 @@ export async function main(ns) {
             await ns.sleep(1);
         }
     }
-    
     async function assignOrHire(div, city, pos, num) {
-        if (!ns.corporation.hasUnlockUpgrade("Office API"))
+        if (!ns.corporation.hasUnlock("Office API"))
             throw "Cannot call assignOrHire without Office API!!!";
         const office = ns.corporation.getOffice(div, city);
         const has = office.employeeJobs[pos];
@@ -111,16 +100,16 @@ export async function main(ns) {
                 + `${office.employeeJobs[pos]} / ${office.employeeJobs.Unassigned}!`);
         }
     }
-    
     /** @type {Promise<?>[]} */
     const buyPromises = [];
     function buyMatOnce(div, city, mat, amt) {
-        if (!ns.corporation.hasUnlockUpgrade("Warehouse API"))
+        if (!ns.corporation.hasUnlock("Warehouse API"))
             throw "Cannot call buyMatOnce without Warehouse API!!!";
         ns.corporation.sellMaterial(div, city, mat, "0", "MP");
         if (ns.corporation.hasResearched(div, "Bulk Purchasing")) {
             ns.corporation.bulkPurchase(div, city, mat, amt);
-        } else {
+        }
+        else {
             ns.corporation.buyMaterial(div, city, mat, amt / WAREHOUSE_SECS_PER_TICK);
             const stop = () => void ns.corporation.buyMaterial(div, city, mat, 0);
             buyPromises.push(ns.asleep(WAREHOUSE_SECS_PER_TICK).then(stop, stop));
@@ -131,7 +120,6 @@ export async function main(ns) {
             await buyPromises.pop();
         }
     }
-    
     /** @param {number} maxInvestNo - the maximum numbered investment to make */
     async function considerInvest(maxInvestNo) {
         const offer = ns.corporation.getInvestmentOffer();
@@ -159,7 +147,6 @@ export async function main(ns) {
         }
         return false;
     }
-    
     const NINE_EMPLOYEE_DIV = new Map([
         ["Operations", 2],
         ["Engineer", 2],
@@ -168,39 +155,36 @@ export async function main(ns) {
         ["Research & Development", 2]
     ]);
     const NINE_EMPLOYEES = 9;
-    
     async function setupDiv1() {
-        if (!corp.divisions.find(div => div.name == DIV1.name))
+        if (!corp.divisions.find(div => div == DIV1.name))
             ns.corporation.expandIndustry(DIV1.type, DIV1.name);
-        
         const ORIG_POSITIONS = ["Operations", "Engineer", "Business"];
-        for (const city of CITIES) {
+        for (const city of Object.values(ns.enums.CityName)) {
             if (!ns.corporation.getDivision(DIV1.name).cities.includes(city))
                 ns.corporation.expandCity(DIV1.name, city);
-            if (ns.corporation.hasUnlockUpgrade("Office API")) {
+            if (ns.corporation.hasUnlock("Office API")) {
                 for (const pos of ORIG_POSITIONS) {
                     await assignOrHire(DIV1.name, city, pos, 1);
                 }
             }
         }
-        if (!ns.corporation.hasUnlockUpgrade("Office API")) {
+        if (!ns.corporation.hasUnlock("Office API")) {
             ns.tail();
             ns.print("Please hire 3 employees in each city of ", DIV1.name, " and assign 1 in each of: ", ORIG_POSITIONS);
         }
-        
-        if (ns.corporation.hasUnlockUpgrade("Warehouse API")) {
+        if (ns.corporation.hasUnlock("Warehouse API")) {
             ns.corporation.setSmartSupply(DIV1.name, HOME_CITY, true);
             for (const mat of DIV1.mats) {
-                ns.corporation.setSmartSupplyUseLeftovers(DIV1.name, HOME_CITY, mat, true);
+                ns.corporation.setSmartSupplyOption(DIV1.name, HOME_CITY, mat, "leftovers");
             }
-        } else {
+        }
+        else {
             ns.tail();
             ns.print(`Please enable Smart Supply for each City in the ${DIV1.name} Division!`);
         }
-        
         // splurge on a single AdVert.Inc purchase
         if (!ns.corporation.getDivision(DIV1.name).awareness) {
-            if (ns.corporation.hasUnlockUpgrade("Office API")) {
+            if (ns.corporation.hasUnlock("Office API")) {
                 while (ns.corporation.getHireAdVertCount(DIV1.name) < 1) {
                     ns.corporation.hireAdVert(DIV1.name);
                     await ns.sleep(1 << 1);
@@ -213,8 +197,8 @@ export async function main(ns) {
         }
         // Upgrade each office’s Storage to 300 (two successive upgrades)
         const WAREHOUSE_LEVEL_TARG = 3;
-        if (ns.corporation.hasUnlockUpgrade("Warehouse API")) {
-            for (const city of CITIES) {
+        if (ns.corporation.hasUnlock("Warehouse API")) {
+            for (const city of Object.values(ns.enums.CityName)) {
                 const currLevel = ns.corporation.getWarehouse(DIV1.name, city).level;
                 if (currLevel < WAREHOUSE_LEVEL_TARG)
                     ns.corporation.upgradeWarehouse(DIV1.name, city, WAREHOUSE_LEVEL_TARG - currLevel);
@@ -223,11 +207,11 @@ export async function main(ns) {
                     ns.corporation.sellMaterial(DIV1.name, city, prod, "MAX", "MP");
                 }
             }
-        } else {
+        }
+        else {
             ns.tail();
             ns.print("Please level each warehouse in ", DIV1.name, " to size 300 and set each of: ", DIV1.prods, " to sell MAX at MP");
         }
-        
         /* eslint-disable no-magic-numbers */
         /** @type {[string, number][]} */
         const INIT_MATERIALS = [
@@ -236,32 +220,31 @@ export async function main(ns) {
             ["Real Estate", 27e3],
         ];
         /* eslint-enable no-magic-numbers */
-        if (ns.corporation.hasUnlockUpgrade("Warehouse API")) {
-            for (const city of CITIES) {
+        if (ns.corporation.hasUnlock("Warehouse API")) {
+            for (const city of Object.values(ns.enums.CityName)) {
                 for (const [mat, amt] of INIT_MATERIALS) {
                     const matData = ns.corporation.getMaterial(DIV1.name, city, mat);
-                    if (matData.qty < amt)
-                        buyMatOnce(DIV1.name, city, mat, amt - matData.qty);
+                    if (matData.stored < amt)
+                        buyMatOnce(DIV1.name, city, mat, amt - matData.stored);
                 }
             }
             await stopBuyMats();
-        } else {
+        }
+        else {
             ns.tail();
             ns.print("Please buy the following in each Warehouse of ", DIV1.name, " for a single tick: ");
             for (const [mat, amt] of INIT_MATERIALS) {
                 ns.print(mat, " at ", amt / WAREHOUSE_SECS_PER_TICK, " (", ns.nFormat(amt / WAREHOUSE_SECS_PER_TICK, "0.0a"), ")/s for one tick to ", ns.nFormat(amt, "0a"), " total");
             }
         }
-        
         if (corp.funds < INVEST_INFO[0].min) {
             if (!await considerInvest(1)) {
                 if (!await ns.prompt("Failed to pass first invest checkpoint, continue?"))
                     return;
             }
         }
-        
-        if (ns.corporation.hasUnlockUpgrade("Office API")) {
-            for (const city of CITIES) {
+        if (ns.corporation.hasUnlock("Office API")) {
+            for (const city of Object.values(ns.enums.CityName)) {
                 const office = ns.corporation.getOffice(DIV1.name, city);
                 if (office.size < NINE_EMPLOYEES) {
                     const toHire = NINE_EMPLOYEES - office.size;
@@ -275,36 +258,34 @@ export async function main(ns) {
                         ns.corporation.setAutoJobAssignment(DIV1.name, city, pos, targ);
                 }
             }
-        } else {
+        }
+        else {
             ns.tail();
             ns.print("Please expand each office to ", NINE_EMPLOYEES, " max employees, hire the max, and then assign jobs as follows: ");
             for (const [pos, targ] of NINE_EMPLOYEE_DIV) {
                 ns.print(`${pos}: ${targ}`);
             }
         }
-        
         const UPGRADES2 = ["Smart Factories", "Smart Storage"];
         const UPGRADE_LEVEL2 = 10;
-        
         for (const upgrade of UPGRADES2) {
             while (ns.corporation.getUpgradeLevel(upgrade) < UPGRADE_LEVEL2) {
                 ns.corporation.levelUpgrade(upgrade);
                 await ns.sleep(1);
             }
         }
-        
         const WAREHOUSE_LEVEL_TARG2 = 10;
-        if (ns.corporation.hasUnlockUpgrade("Warehouse API")) {
-            for (const city of CITIES) {
+        if (ns.corporation.hasUnlock("Warehouse API")) {
+            for (const city of Object.values(ns.enums.CityName)) {
                 const currLevel = ns.corporation.getWarehouse(DIV1.name, city).level;
                 if (currLevel < WAREHOUSE_LEVEL_TARG2)
                     ns.corporation.upgradeWarehouse(DIV1.name, city, WAREHOUSE_LEVEL_TARG2 - currLevel);
             }
-        } else {
+        }
+        else {
             ns.tail();
             ns.print("Please level each warehouse in ", DIV1.name, " 7 times to size 2000");
         }
-        
         /* eslint-disable no-magic-numbers */
         /** Material, amount to have, amount to buy from last check
          * @type {[string, number, number][]} */
@@ -315,23 +296,23 @@ export async function main(ns) {
             ["Real Estate", 146.4e3, 119.4e3],
         ];
         /* eslint-enable no-magic-numbers */
-        if (ns.corporation.hasUnlockUpgrade("Warehouse API")) {
-            for (const city of CITIES) {
+        if (ns.corporation.hasUnlock("Warehouse API")) {
+            for (const city of Object.values(ns.enums.CityName)) {
                 for (const [mat, amt,] of MATERIALS2) {
                     const matData = ns.corporation.getMaterial(DIV1.name, city, mat);
-                    if (matData.qty < amt)
-                        buyMatOnce(DIV1.name, city, mat, amt - matData.qty);
+                    if (matData.stored < amt)
+                        buyMatOnce(DIV1.name, city, mat, amt - matData.stored);
                 }
             }
             await stopBuyMats();
-        } else {
+        }
+        else {
             ns.tail();
             ns.print("Please buy the following in each Warehouse of ", DIV1.name, " for a single tick: ");
             for (const [mat, amt, diff] of MATERIALS2) {
                 ns.print(mat, " at ", diff / WAREHOUSE_SECS_PER_TICK, " (", ns.nFormat(diff / WAREHOUSE_SECS_PER_TICK, "0.0a"), ")/s for one tick to get to ", ns.nFormat(amt - diff, "0a"), " + ", ns.nFormat(diff, "0a"), " = ", ns.nFormat(amt, "0a"));
             }
         }
-        
         // Consider invest
         if (corp.funds < INVEST_INFO[1].min) {
             if (!await considerInvest(2)) {
@@ -339,25 +320,20 @@ export async function main(ns) {
                     return;
             }
         }
-        
         // TODO: "Let’s get a bit more storage space" to the end of the section
     }
-    
     // await setupDiv1();
-    
     async function setupDiv2() {
-        if (!corp.divisions.find(div => div.name == DIV2.name))
+        if (!corp.divisions.find(div => div == DIV2.name))
             ns.corporation.expandIndustry(DIV2.type, DIV2.name);
-        
         // Expand first to Aevum, then to all other cities:
-        const MAIN_CITY = "Aevum";
+        const MAIN_CITY = ns.enums.CityName.Aevum;
         if (!ns.corporation.getDivision(DIV2.name).cities.includes(MAIN_CITY))
             ns.corporation.expandCity(DIV2.name, MAIN_CITY);
-        
         // In Aevum, Upgrade the Size of the office to 30 employees and hire enough folks to have 6 of each type of employee except Training.
         const POSITIONS = ["Operations", "Engineer", "Business", "Management", "Research & Development"];
         const MAIN_OFFICE_SIZE1 = 30;
-        if (ns.corporation.hasUnlockUpgrade("Office API")) {
+        if (ns.corporation.hasUnlock("Office API")) {
             const office = ns.corporation.getOffice(DIV2.name, MAIN_CITY);
             if (office.size < MAIN_OFFICE_SIZE1) {
                 ns.corporation.upgradeOfficeSize(DIV2.name, MAIN_CITY, MAIN_OFFICE_SIZE1 - office.size);
@@ -365,18 +341,18 @@ export async function main(ns) {
             for (const pos of POSITIONS) {
                 await assignOrHire(DIV2.name, MAIN_CITY, pos, MAIN_OFFICE_SIZE1 / POSITIONS.length);
             }
-        } else {
+        }
+        else {
             ns.print(`In ${MAIN_CITY}, Upgrade the Size of the Office to ${MAIN_OFFICE_SIZE1} and hire enough folks to have 6 of each type of employee except Training.`);
             ns.print(`In every other city, upgrade the size of the office to ${NINE_EMPLOYEES} and hire as follows: `);
             for (const [pos, targ] of NINE_EMPLOYEE_DIV) {
                 ns.print(`${pos}: ${targ}`);
             }
         }
-        
-        for (const city of CITIES) {
+        for (const city of Object.values(ns.enums.CityName)) {
             if (!ns.corporation.getDivision(DIV2.name).cities.includes(city))
                 ns.corporation.expandCity(DIV2.name, city);
-            if (ns.corporation.hasUnlockUpgrade("Office API")) {
+            if (ns.corporation.hasUnlock("Office API")) {
                 const office = ns.corporation.getOffice(DIV2.name, city);
                 if (office.size < NINE_EMPLOYEES) {
                     ns.corporation.upgradeOfficeSize(DIV2.name, city, NINE_EMPLOYEES - office.size);
@@ -385,17 +361,16 @@ export async function main(ns) {
                     await assignOrHire(DIV2.name, city, pos, amt);
                 }
             }
-            if (ns.corporation.hasUnlockUpgrade("Warehouse API") && ns.corporation.hasWarehouse(DIV2.name, city)) {
+            if (ns.corporation.hasUnlock("Warehouse API") && ns.corporation.hasWarehouse(DIV2.name, city)) {
                 const wh = ns.corporation.getWarehouse(DIV2.name, city);
                 if (wh.level > 0) {
                     ns.corporation.setSmartSupply(DIV2.name, city, true);
                     for (const mat of DIV2.mats) {
-                        ns.corporation.setSmartSupplyUseLeftovers(DIV2.name, city, mat, true);
+                        ns.corporation.setSmartSupplyOption(DIV2.name, city, mat, "leftovers");
                     }
                 }
             }
         }
-        
         const UPGRADES = ["FocusWires", "Neural Accelerators", "Speech Processor Implants", "Nuoptimal Nootropic Injector Implants"];
         const TARG_LEVEL = 20;
         for (const upgrade of UPGRADES) {
@@ -404,10 +379,9 @@ export async function main(ns) {
                 await ns.sleep(1 << 2);
             }
         }
-        
         ns.atExit(() => ns.run("/corp/makeProducts.js", 1));
     }
-    
     await setupDiv1();
     await setupDiv2();
 }
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoic2V0dXAuanMiLCJzb3VyY2VSb290IjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwL3NvdXJjZXMvIiwic291cmNlcyI6WyJjb3JwL3NldHVwLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiJBQUdBLCtJQUErSTtBQUMvSSxxQkFBcUI7QUFDckIsTUFBTSxDQUFDLEtBQUssVUFBVSxJQUFJLENBQUMsRUFBb0I7SUFDM0MsRUFBRSxDQUFDLFVBQVUsQ0FBQyxZQUFZLENBQUMsQ0FBQztJQUM1QixFQUFFLENBQUMsVUFBVSxDQUFDLE9BQU8sQ0FBQyxDQUFDO0lBQ3ZCLEVBQUUsQ0FBQyxVQUFVLENBQUMsUUFBUSxDQUFDLENBQUM7SUFFeEIsTUFBTSxTQUFTLEdBQUcsV0FBVyxDQUFDO0lBQ2pDLE1BQU0sU0FBUyxHQUFHLE1BQU0sQ0FBQztJQVV6QixNQUFNLElBQUksR0FBUztRQUNsQixJQUFJLEVBQUUsYUFBYTtRQUNuQixJQUFJLEVBQUUsYUFBYTtRQUNuQixJQUFJLEVBQUUsQ0FBQyxPQUFPLEVBQUUsV0FBVyxDQUFDO1FBQ3RCLEtBQUssRUFBRSxDQUFDLFFBQVEsRUFBRSxNQUFNLENBQUM7S0FDL0IsQ0FBQztJQUNDLE1BQU0sSUFBSSxHQUFRO1FBQ3BCLElBQUksRUFBRSxTQUFTO1FBQ2YsSUFBSSxFQUFFLFNBQVM7UUFDZixJQUFJLEVBQUUsQ0FBQyxRQUFRLENBQUM7S0FDaEIsQ0FBQztJQUNDLE1BQU0sSUFBSSxHQUFHLEdBQUcsQ0FBQztJQUVqQixNQUFNLFNBQVMsR0FBRyxFQUFFLENBQUMsSUFBSSxDQUFDLE1BQU0sSUFBSSxDQUFDLElBQUksRUFBRSxDQUFDLElBQUksQ0FBQyxDQUFDLENBQUMsSUFBSSxRQUFRLENBQUM7SUFFbkUsTUFBTSxFQUFFLEdBQUcsRUFBRSxDQUFDLFlBQVksRUFBRSxDQUFDLFdBQVcsQ0FBQztJQUN6QyxNQUFNLFlBQVksR0FBRyxDQUFDLENBQUM7SUFDcEIsMkRBQTJEO0lBQzNELE1BQU0sVUFBVSxHQUFHLEtBQUss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

@@ -237,7 +237,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 	 * @param {number} MA The amount of money available on the server
 	 * @param {number} MM The maximum amount of money the server can contain */
 	function printServerLine(action: string, name: string, MA: number, MM: number) {
-		pprint(`║ ${action} ║ ${name}`, " ", `${ns.nFormat(MA, "0a")} / ${ns.nFormat(MM, "0a")} : ${ns.nFormat(MA / MM, "0%")} ║`);
+		pprint(`║ ${action} ║ ${name}`, " ", `${ns.formatNumber(MA, 0)} / ${ns.formatNumber(MM, 0)} : ${ns.formatPercent(MA / MM, 0)} ║`);
 	}
 
 	function log() {
@@ -430,7 +430,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 			}
 			if (config.SHARE_REMAINING_RAM && (fRam() - sharedRAM) >= RAM_COSTS[HType.Share]) {
 				resetShare();
-				ns.exec(FILES[HType.Share], host[1], fRam() / RAM_COSTS[HType.Share]);
+				ns.exec(FILES[HType.Share], host[1], Math.floor(fRam() / RAM_COSTS[HType.Share]));
 			}
 			tarIndex++;
 		}
@@ -460,8 +460,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 			ram *= 2;
 		}
 		function buyServer(r: number) {
-			const GIGA = 1000000000;
-			ns.purchaseServer("SERVER-" + ns.nFormat(r * GIGA, "0.0b"), r);
+			ns.purchaseServer("SERVER-" + ns.formatRam(r, 1), r);
 		}
 		if (ns.getPurchasedServers().length < ns.getPurchasedServerLimit() && ram > 0) {
 			buyServer(ram);

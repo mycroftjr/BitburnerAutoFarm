@@ -26,7 +26,8 @@ async function mainHelper(ns: DeepReadonly<NS>) {
     const DIV_MATS = ["Plants", "Energy"];
     const corp = ns.corporation.getCorporation();
     
-    const tempDiv = corp.divisions.find(d => d.type == DIV_TYPE);
+    const divs = corp.divisions.map(d => ns.corporation.getDivision(d));
+    const tempDiv = divs.find(d => d.type == DIV_TYPE);
     if (!tempDiv) {
         throw `Must already have a ${DIV_TYPE} Division; run /corp/setup.js if you have not`;
     }
@@ -44,7 +45,7 @@ async function mainHelper(ns: DeepReadonly<NS>) {
 
     let lastProductName = div.products.find(p => p.startsWith(PRODUCT_PREFIX)) ?? FAKE_PRODUCT_NAME;
     try {
-        const product = ns.corporation.getProduct(divName, getNextProductName());
+        const product = ns.corporation.getProduct(divName, MAIN_CITY, getNextProductName());
         lastProductName = product.name;
     } catch {}
 
@@ -57,7 +58,7 @@ async function mainHelper(ns: DeepReadonly<NS>) {
         const lastProductNum = lastProductName.substring(PRODUCT_PREFIX.length);
         const productName = `${PRODUCT_PREFIX}${parseInt(lastProductNum, 10)+1}`;
         try {
-            const product = ns.corporation.getProduct(divName, productName);
+            const product = ns.corporation.getProduct(divName, MAIN_CITY, productName);
             lastProductName = product.name;
             return getNextProductName();
         } catch {}
@@ -83,13 +84,13 @@ async function mainHelper(ns: DeepReadonly<NS>) {
 
         if (!ns.corporation.hasResearched(divName, "Hi-Tech R&D Laboratory")) {
             const cost = ns.corporation.getResearchCost(divName, "Hi-Tech R&D Laboratory");
-            if (div.research > cost) {
+            if (div.researchPoints > cost) {
                 ns.corporation.research(divName, "Hi-Tech R&D Laboratory");
             } else {
                 ns.tprint("Hi-Tech R&D Laboratory cost: ", cost);
             }
         }
-        if (!ns.corporation.hasResearched(divName, MARKET_TAS[MARKET_TAS.length-1]) && div.research > marketTAIICost()) {
+        if (!ns.corporation.hasResearched(divName, MARKET_TAS[MARKET_TAS.length-1]) && div.researchPoints > marketTAIICost()) {
             for (const res of MARKET_TAS) {
                 ns.corporation.research(divName, res);
             }
@@ -99,7 +100,7 @@ async function mainHelper(ns: DeepReadonly<NS>) {
             if (ns.corporation.hasWarehouse(divName, city)) {
                 ns.corporation.setSmartSupply(divName, city, true);
                 for (const mat of DIV_MATS) {
-                    ns.corporation.setSmartSupplyUseLeftovers(divName, city, mat, true);
+                    ns.corporation.setSmartSupplyOption(divName, city, mat, "leftovers");
                 }
             }
         }
@@ -107,14 +108,14 @@ async function mainHelper(ns: DeepReadonly<NS>) {
         if (lastProductName == FAKE_PRODUCT_NAME) {
             lastProductName = designProduct();
         }
-        const latestProduct = ns.corporation.getProduct(divName, lastProductName);
+        const latestProduct = ns.corporation.getProduct(divName, MAIN_CITY, lastProductName);
         if (latestProduct.developmentProgress < COMPLETE) {
             ns.print("Waiting on product ", lastProductName, " development to finish");
             await ns.sleep(SLEEP_MS);
             continue;
         }
 
-        if (!latestProduct.sCost || latestProduct.sCost == "MP") {
+        if (!latestProduct.desiredSellPrice || latestProduct.desiredSellPrice == "MP") {
             // TODO: binary search the sell price at which the product gain per second is slightly negative in all cities
             ns.corporation.sellProduct(divName, MAIN_CITY, latestProduct.name, "MAX", "MP", true);
             await ns.sleep(SLEEP_MS);

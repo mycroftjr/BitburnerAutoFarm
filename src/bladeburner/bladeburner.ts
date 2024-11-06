@@ -1,8 +1,9 @@
-import type { NS } from "@ns";
+import type { NS, CityName, BladeburnerActionName, BladeburnerActionType, BladeburnerBlackOpName, BladeburnerSkillName} from "@ns";
 import type { DeepReadonly } from "ts-essentials";
 
 /** [type of action, name of action] */
-const ALL_ACTIONS: [string, string][] = [];
+type BladeburnerAction = [`${BladeburnerActionType}`, `${BladeburnerActionName}`];
+const ALL_ACTIONS: BladeburnerAction[] = [];
 
 /** @param {NS} ns */
 export function haveBladeburnerApiAccess(ns: DeepReadonly<NS>): boolean {
@@ -16,7 +17,6 @@ export function haveBladeburnerApiAccess(ns: DeepReadonly<NS>): boolean {
 /** Assigns skill points and schedules new actions. Returns the time it will take to complete the current action.
  * @param {NS} ns */
  export function bladeburnerStep(ns: DeepReadonly<NS>): number {
-    const CITIES = ["Sector-12", "Aevum", "Chongqing", "Ishima", "New Tokyo", "Volhaven"];
     // The hard limit of the Overclock skill's level
     const OVERCLOCK_MAX_LEVEL = 90;
     // The softcap of the Datamancer skill's level
@@ -48,7 +48,7 @@ export function haveBladeburnerApiAccess(ns: DeepReadonly<NS>): boolean {
         /* eslint-enable no-magic-numbers */
     }
 
-    const INTEL_ACTIONS: readonly [string, string][] = [
+    const INTEL_ACTIONS: readonly BladeburnerAction[] = [
         ["General", "Field Analysis"],
         // ["Contracts", "Tracking"],  // uses flat numbers instead of percentages, basically pointless
         ["Operations", "Investigation"],
@@ -59,8 +59,8 @@ export function haveBladeburnerApiAccess(ns: DeepReadonly<NS>): boolean {
     const CHAOS_RATIO = 1.25;
     const city = () => ns.bladeburner.getCity();
     const chaos = () => ns.bladeburner.getCityChaos(city());
-    const citiesByChaos = CITIES
-        .map(c => [ns.bladeburner.getCityChaos(c), c] as [number, string])
+    const citiesByChaos = Object.values(ns.enums.CityName)
+        .map(c => [ns.bladeburner.getCityChaos(c), c] as [number, CityName])
         .sort(([chaosA, ], [chaosB, ]) => chaosA - chaosB);
     
     // TODO: only move for communities if the rep gain of Raid over the next best is more than the increase in Chaos
@@ -81,7 +81,7 @@ export function haveBladeburnerApiAccess(ns: DeepReadonly<NS>): boolean {
         }
     }
 
-    function spamUpgrade(upgrade: string, maxLevel = Infinity) {
+    function spamUpgrade(upgrade: `${BladeburnerSkillName}`, maxLevel = Infinity) {
         while (ns.bladeburner.getSkillPoints() >= ns.bladeburner.getSkillUpgradeCost(upgrade)
                 && ns.bladeburner.getSkillLevel(upgrade) + 1 <= maxLevel) {
             ns.bladeburner.upgradeSkill(upgrade);
@@ -101,7 +101,7 @@ export function haveBladeburnerApiAccess(ns: DeepReadonly<NS>): boolean {
 
     /** Returns the lower-end estimate of success chance for the given action.
      * @modifies {popAcc} */
-    function getSuccessChance(type: string, name: string) {
+    function getSuccessChance(type: `${BladeburnerActionType}`, name: `${BladeburnerActionName}`) {
         const chances = ns.bladeburner.getActionEstimatedSuccessChance(type, name);
         if (chances[0] != chances[1] && intel.popAcc) {
             intel.popAcc = false;
@@ -117,7 +117,7 @@ export function haveBladeburnerApiAccess(ns: DeepReadonly<NS>): boolean {
     }
 
     // Populate intel with calculations on the actions we can currently take, other than Recruitment
-    ALL_ACTIONS.filter(([type, name]) => name != "Recruitment" && (type != "BlackOps" || ns.bladeburner.getBlackOpRank(name) <= ns.bladeburner.getRank()))
+    ALL_ACTIONS.filter(([type, name]) => name != "Recruitment" && (type != "Black Operations" || ns.bladeburner.getBlackOpRank(name as BladeburnerBlackOpName) <= ns.bladeburner.getRank()))
         .reverse().map(([type, name]) => getSuccessChance(type, name));
 
     spamUpgrade("Overclock", OVERCLOCK_MAX_LEVEL);
@@ -140,29 +140,29 @@ export function haveBladeburnerApiAccess(ns: DeepReadonly<NS>): boolean {
         timeElapsed = 0;
     }
 
-    if (action.type != "Idle" && ns.bladeburner.getActionEstimatedSuccessChance(action.type, action.name)[0] != 1.0) {
+    if (action && ns.bladeburner.getActionEstimatedSuccessChance(action.type as BladeburnerActionType, action.name as BladeburnerActionName)[0] != 1.0) {
         ns.print("Cancelling existing Bladeburner action due to increased danger!");
         ns.bladeburner.stopBladeburnerAction();
         action = ns.bladeburner.getCurrentAction();
         timeElapsed = 0;
     }
-    if (action.type == "Idle") {
+    if (!action) {
         // Find a bladeburner action to start
         const stam = ns.bladeburner.getStamina();
         // Low stam will harm success chances
         if (2 * stam[0] > stam[1]) {
             /** Sorts the given actions into the returned array
              * @param {[string, string][]} actions
-             * @returns {[number, number, string, string][]} [score, time to complete action, type of action, name of action] */
-            function sortActions(actions: DeepReadonly<[string, string][]>, gradeOnIntel = false) {
-                const out: [number, number, string, string][] = [];
+             * @returns {[number, number, BladeburnerActionType, BladeburnerActionName][]} [score, time to complete action, type of action, name of action] */
+            function sortActions(actions: DeepReadonly<BladeburnerAction[]>, gradeOnIntel = false) {
+                const out: [number, number, `${BladeburnerActionType}`, `${BladeburnerActionName}`][] = [];
                 for (const [type, name] of actions) {
                     if (ns.bladeburner.getActionCountRemaining(type, name) <= 0) {
                         // ns.print(`Skipping ${type}: ${name} as no counts are remaining`);
                         continue;
                     }
-                    if (type == "BlackOps") {
-                        const neededRank = ns.bladeburner.getBlackOpRank(name);
+                    if (type == "Black Operations") {
+                        const neededRank = ns.bladeburner.getBlackOpRank(name as BladeburnerBlackOpName);
                         const rank = ns.bladeburner.getRank();
                         if (rank < neededRank) {
                             // ns.print(`Skipping ${type}: ${name} because Rank is not high enough: ${rank} vs ${neededRank}`);
@@ -174,15 +174,14 @@ export function haveBladeburnerApiAccess(ns: DeepReadonly<NS>): boolean {
                         // ns.print(`Skipping ${type}: ${name} as success estimate is only ${chance}`);
                         continue;
                     }
-                    const lvl = ns.bladeburner.getActionCurrentLevel(type, name);
                     const time = ns.bladeburner.getActionTime(type, name);
-                    const score = gradeOnIntel ? getIntelEffectiveness(name) : ns.bladeburner.getActionRepGain(type, name, lvl);
+                    const score = gradeOnIntel ? getIntelEffectiveness(name) : ns.bladeburner.getActionRepGain(type, name);
                     const scoreSpeed = score / time;
                     out.push([scoreSpeed, time, type, name]);
                 }
                 return out.sort(([speedA, timeA, typeA], [speedB, timeB, typeB]) => {
                     // BlackOps first
-                    const typeDiff = (typeB == "BlackOps" ? 1 : 0) - (typeA == "BlackOps" ? 1 : 0);
+                    const typeDiff = (typeB == "Black Operations" ? 1 : 0) - (typeA == "Black Operations" ? 1 : 0);
                     if (typeDiff != 0) return typeDiff;
                     // Bigger speeds first
                     const speedDiff = speedB - speedA;
@@ -223,7 +222,9 @@ export function haveBladeburnerApiAccess(ns: DeepReadonly<NS>): boolean {
     }
 
     action = ns.bladeburner.getCurrentAction();
-    return ns.bladeburner.getActionTime(action.type, action.name) - ns.bladeburner.getActionCurrentTime();
+    if (!action)
+        return 0;
+    return ns.bladeburner.getActionTime(action.type as BladeburnerActionType, action.name as BladeburnerActionName) - ns.bladeburner.getActionCurrentTime();
 }
 
 /** @param {NS} ns */
@@ -233,10 +234,10 @@ export async function main(ns: DeepReadonly<NS>) {
     ns.disableLog("bladeburner.switchCity");
     const SLEEP_MILLIS = 1e3;
     if (!haveBladeburnerApiAccess(ns)) return;
-    ALL_ACTIONS.push(...ns.bladeburner.getGeneralActionNames().map(name => ["General", name] as [string, string]));
-    ALL_ACTIONS.push(...ns.bladeburner.getContractNames().map(name => ["Contracts", name] as [string, string]));
-    ALL_ACTIONS.push(...ns.bladeburner.getOperationNames().map(name => ["Operations", name] as [string, string]));
-    ALL_ACTIONS.push(...ns.bladeburner.getBlackOpNames().map(name => ["BlackOps", name] as [string, string]));
+    ALL_ACTIONS.push(...ns.bladeburner.getGeneralActionNames().map(name => ["General", name] as BladeburnerAction));
+    ALL_ACTIONS.push(...ns.bladeburner.getContractNames().map(name => ["Contracts", name] as BladeburnerAction));
+    ALL_ACTIONS.push(...ns.bladeburner.getOperationNames().map(name => ["Operations", name] as BladeburnerAction));
+    ALL_ACTIONS.push(...ns.bladeburner.getBlackOpNames().map(name => ["Black Operations", name] as BladeburnerAction));
     while (true) {
         await ns.sleep(Math.min(bladeburnerStep(ns), SLEEP_MILLIS));
     }

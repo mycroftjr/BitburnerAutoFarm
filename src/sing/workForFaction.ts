@@ -1,4 +1,4 @@
-import type { NS } from "@ns";
+import type { NS, FactionWorkType } from "@ns";
 import type { DeepReadonly } from "ts-essentials";
 
 /** @param {NS} ns */
@@ -10,7 +10,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     const repTarg = ns.args[1] as number;
     const preferCombat = ns.args[2] as boolean;
     const CHARISMA_TARG = 250;
-    let JOB_PRIOS: string[] = [];
+    let JOB_PRIOS: `${FactionWorkType}`[] = [];
     if (preferCombat) {
         if (ns.getPlayer().skills.charisma > CHARISMA_TARG) {
             JOB_PRIOS = ["security", "field", "hacking"];

@@ -1,4 +1,4 @@
-import type { NS } from "@ns";
+import type { NS, CityName, CorpIndustryName, CorpMaterialName, CorpUnlockName } from "@ns";
 import type { DeepReadonly } from "ts-essentials";
 
 /** Based on https://docs.google.com/document/d/e/2PACX-1vTzTvYFStkFjQut5674ppS4mAhWggLL5PEQ_IbqSRDDCZ-l-bjv0E6Uo04Z-UfPdaQVu4c84vawwq8E/pub */
@@ -10,23 +10,31 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
     const HOME_CITY = "Sector-12";
 	const CORP_NAME = "Corp";
-	const DIV1 = {
+    type Div = {
+        type: CorpIndustryName,
+        // the division name
+        name: string,
+        mats: `${CorpMaterialName}`[],
+    }
+    interface Div1 extends Div {
+        prods: `${CorpMaterialName}`[],
+    }
+	const DIV1: Div1 = {
 		type: "Agriculture",
 		name: "Agriculture",
-		mats: ["Water", "Energy"],
+		mats: ["Water", "Chemicals"],
         prods: ["Plants", "Food"],
 	};
-    const DIV2 = {
+    const DIV2: Div = {
 		type: "Tobacco",
 		name: "Tobacco",
-		mats: ["Plants", "Energy"],
+		mats: ["Plants"],
 	};
-    const CITIES = ["Sector-12", "Aevum", "Chongqing", "Ishima", "New Tokyo", "Volhaven"];
     const CENT = 100;
 
     const FULL_AUTO = ns.args.length <= 0 || ns.args[0] != "MANUAL";
 
-	const bn = ns.getPlayer().bitNodeN;
+	const bn = ns.getResetInfo().currentNode;
 	const FREE_CORP_BN = 3;
     // The optimal amount of seed money for minimal manual work
     const SEED_MONEY = 250e9;
@@ -47,7 +55,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         }
     ];
 
-    if (!ns.getPlayer().hasCorporation) {
+    if (!ns.corporation.hasCorporation()) {
         if (bn == FREE_CORP_BN) {
             if (ns.getPlayer().city != HOME_CITY)
                 ns.singularity.travelToCity(HOME_CITY);
@@ -57,20 +65,20 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             ns.print("Please go to Cityhall in ", HOME_CITY, " and self-fund a corporation using at least $", ns.nFormat(SEED_MONEY, "0a"));
         }
     }
-    if (!ns.getPlayer().hasCorporation)
+    if (!ns.corporation.hasCorporation())
         return;
     const corp = ns.corporation.getCorporation();
     
     /** Buys the given one-time upgrade for the corp, if we don't already have it. */
-    function buyUpgrade(upgrade: string) {
-        if (ns.corporation.hasUnlockUpgrade(upgrade)) return true;
-        if (ns.corporation.getUnlockUpgradeCost(upgrade) > corp.funds) {
+    function buyUpgrade(upgrade: CorpUnlockName) {
+        if (ns.corporation.hasUnlock(upgrade)) return true;
+        if (ns.corporation.getUnlockCost(upgrade) > corp.funds) {
             ns.tail();
             ns.print("Failed to buy upgrade ", upgrade);
             return false;
         }
-        ns.corporation.unlockUpgrade(upgrade);
-        return ns.corporation.hasUnlockUpgrade(upgrade);
+        ns.corporation.purchaseUnlock(upgrade);
+        return ns.corporation.hasUnlock(upgrade);
     }
     
     if (corp.funds >= SEED_MONEY) {
@@ -88,8 +96,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         }
     }
 
-    async function assignOrHire(div: string, city: string, pos: string, num: number) {
-        if (!ns.corporation.hasUnlockUpgrade("Office API"))
+    async function assignOrHire(div: string, city: CityName, pos: string, num: number) {
+        if (!ns.corporation.hasUnlock("Office API"))
             throw "Cannot call assignOrHire without Office API!!!";
         const office = ns.corporation.getOffice(div, city);
         const has = office.employeeJobs[pos as keyof typeof office.employeeJobs];
@@ -112,8 +120,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
     /** @type {Promise<?>[]} */
     const buyPromises: Promise<unknown>[] = [];
-    function buyMatOnce(div: string, city: string, mat: string, amt: number) {
-        if (!ns.corporation.hasUnlockUpgrade("Warehouse API"))
+    function buyMatOnce(div: string, city: CityName, mat: string, amt: number) {
+        if (!ns.corporation.hasUnlock("Warehouse API"))
             throw "Cannot call buyMatOnce without Warehouse API!!!";
         ns.corporation.sellMaterial(div, city, mat, "0", "MP");
         if (ns.corporation.hasResearched(div, "Bulk Purchasing")) {
@@ -167,28 +175,28 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     const NINE_EMPLOYEES = 9;
 
     async function setupDiv1() {
-        if (!corp.divisions.find(div => div.name == DIV1.name))
+        if (!corp.divisions.find(div => div == DIV1.name))
             ns.corporation.expandIndustry(DIV1.type, DIV1.name);
 
         const ORIG_POSITIONS = ["Operations", "Engineer", "Business"];
-        for (const city of CITIES) {
+        for (const city of Object.values(ns.enums.CityName)) {
             if (!ns.corporation.getDivision(DIV1.name).cities.includes(city))
                 ns.corporation.expandCity(DIV1.name, city);
-            if (ns.corporation.hasUnlockUpgrade("Office API")) {
+            if (ns.corporation.hasUnlock("Office API")) {
                 for (const pos of ORIG_POSITIONS) {
                     await assignOrHire(DIV1.name, city, pos, 1);
                 }
             }
         }
-        if (!ns.corporation.hasUnlockUpgrade("Office API")) {
+        if (!ns.corporation.hasUnlock("Office API")) {
             ns.tail();
             ns.print("Please hire 3 employees in each city of ", DIV1.name, " and assign 1 in each of: ", ORIG_POSITIONS);
         }
 
-        if (ns.corporation.hasUnlockUpgrade("Warehouse API")) {
+        if (ns.corporation.hasUnlock("Warehouse API")) {
             ns.corporation.setSmartSupply(DIV1.name, HOME_CITY, true);
             for (const mat of DIV1.mats) {
-                ns.corporation.setSmartSupplyUseLeftovers(DIV1.name, HOME_CITY, mat, true);
+                ns.corporation.setSmartSupplyOption(DIV1.name, HOME_CITY, mat, "leftovers");
             }
         } else {
             ns.tail();
@@ -197,7 +205,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
         // splurge on a single AdVert.Inc purchase
         if (!ns.corporation.getDivision(DIV1.name).awareness) {
-            if (ns.corporation.hasUnlockUpgrade("Office API")) {
+            if (ns.corporation.hasUnlock("Office API")) {
                 while (ns.corporation.getHireAdVertCount(DIV1.name) < 1) {
                     ns.corporation.hireAdVert(DIV1.name);
                     await ns.sleep(1<<1);
@@ -210,8 +218,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         }
         // Upgrade each office’s Storage to 300 (two successive upgrades)
         const WAREHOUSE_LEVEL_TARG = 3;
-        if (ns.corporation.hasUnlockUpgrade("Warehouse API")) {
-            for (const city of CITIES) {
+        if (ns.corporation.hasUnlock("Warehouse API")) {
+            for (const city of Object.values(ns.enums.CityName)) {
                 const currLevel = ns.corporation.getWarehouse(DIV1.name, city).level;
                 if (currLevel < WAREHOUSE_LEVEL_TARG)
                     ns.corporation.upgradeWarehouse(DIV1.name, city, WAREHOUSE_LEVEL_TARG - currLevel);
@@ -233,12 +241,12 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             ["Real Estate", 27e3],
         ];
         /* eslint-enable no-magic-numbers */
-        if (ns.corporation.hasUnlockUpgrade("Warehouse API")) {
-            for (const city of CITIES) {
+        if (ns.corporation.hasUnlock("Warehouse API")) {
+            for (const city of Object.values(ns.enums.CityName)) {
                 for (const [mat, amt] of INIT_MATERIALS) {
                     const matData = ns.corporation.getMaterial(DIV1.name, city, mat);
-                    if (matData.qty < amt)
-                        buyMatOnce(DIV1.name, city, mat, amt - matData.qty);
+                    if (matData.stored < amt)
+                        buyMatOnce(DIV1.name, city, mat, amt - matData.stored);
                 }
             }
             await stopBuyMats();
@@ -258,8 +266,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             }
         }
 
-        if (ns.corporation.hasUnlockUpgrade("Office API")) {
-            for (const city of CITIES) {
+        if (ns.corporation.hasUnlock("Office API")) {
+            for (const city of Object.values(ns.enums.CityName)) {
                 const office = ns.corporation.getOffice(DIV1.name, city);
                 if (office.size < NINE_EMPLOYEES) {
                     const toHire = NINE_EMPLOYEES - office.size;
@@ -292,8 +300,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         }
 
         const WAREHOUSE_LEVEL_TARG2 = 10;
-        if (ns.corporation.hasUnlockUpgrade("Warehouse API")) {
-            for (const city of CITIES) {
+        if (ns.corporation.hasUnlock("Warehouse API")) {
+            for (const city of Object.values(ns.enums.CityName)) {
                 const currLevel = ns.corporation.getWarehouse(DIV1.name, city).level;
                 if (currLevel < WAREHOUSE_LEVEL_TARG2)
                     ns.corporation.upgradeWarehouse(DIV1.name, city, WAREHOUSE_LEVEL_TARG2 - currLevel);
@@ -313,12 +321,12 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             ["Real Estate", 146.4e3, 119.4e3],
         ];
         /* eslint-enable no-magic-numbers */
-        if (ns.corporation.hasUnlockUpgrade("Warehouse API")) {
-            for (const city of CITIES) {
+        if (ns.corporation.hasUnlock("Warehouse API")) {
+            for (const city of Object.values(ns.enums.CityName)) {
                 for (const [mat, amt, ] of MATERIALS2) {
                     const matData = ns.corporation.getMaterial(DIV1.name, city, mat);
-                    if (matData.qty < amt)
-                        buyMatOnce(DIV1.name, city, mat, amt - matData.qty);
+                    if (matData.stored < amt)
+                        buyMatOnce(DIV1.name, city, mat, amt - matData.stored);
                 }
             }
             await stopBuyMats();
@@ -346,18 +354,18 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     // await setupDiv1();
 
     async function setupDiv2() {
-        if (!corp.divisions.find(div => div.name == DIV2.name))
+        if (!corp.divisions.find(div => div == DIV2.name))
             ns.corporation.expandIndustry(DIV2.type, DIV2.name);
         
         // Expand first to Aevum, then to all other cities:
-        const MAIN_CITY = "Aevum";
+        const MAIN_CITY = ns.enums.CityName.Aevum;
         if (!ns.corporation.getDivision(DIV2.name).cities.includes(MAIN_CITY))
             ns.corporation.expandCity(DIV2.name, MAIN_CITY);
 
         // In Aevum, Upgrade the Size of the office to 30 employees and hire enough folks to have 6 of each type of employee except Training.
         const POSITIONS = ["Operations", "Engineer", "Business", "Management", "Research & Development"];
         const MAIN_OFFICE_SIZE1 = 30;
-        if (ns.corporation.hasUnlockUpgrade("Office API")) {
+        if (ns.corporation.hasUnlock("Office API")) {
             const office = ns.corporation.getOffice(DIV2.name, MAIN_CITY);
             if (office.size < MAIN_OFFICE_SIZE1) {
                 ns.corporation.upgradeOfficeSize(DIV2.name, MAIN_CITY, MAIN_OFFICE_SIZE1 - office.size);
@@ -373,10 +381,10 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             }
         }
 
-        for (const city of CITIES) {
+        for (const city of Object.values(ns.enums.CityName)) {
             if (!ns.corporation.getDivision(DIV2.name).cities.includes(city))
                 ns.corporation.expandCity(DIV2.name, city);
-            if (ns.corporation.hasUnlockUpgrade("Office API")) {
+            if (ns.corporation.hasUnlock("Office API")) {
                 const office = ns.corporation.getOffice(DIV2.name, city);
                 if (office.size < NINE_EMPLOYEES) {
                     ns.corporation.upgradeOfficeSize(DIV2.name, city, NINE_EMPLOYEES - office.size);
@@ -385,12 +393,12 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                     await assignOrHire(DIV2.name, city, pos, amt);
                 }
             }
-            if (ns.corporation.hasUnlockUpgrade("Warehouse API") && ns.corporation.hasWarehouse(DIV2.name, city)) {
+            if (ns.corporation.hasUnlock("Warehouse API") && ns.corporation.hasWarehouse(DIV2.name, city)) {
                 const wh = ns.corporation.getWarehouse(DIV2.name, city);
                 if (wh.level > 0) {
                     ns.corporation.setSmartSupply(DIV2.name, city, true);
                     for (const mat of DIV2.mats) {
-                        ns.corporation.setSmartSupplyUseLeftovers(DIV2.name, city, mat, true);
+                        ns.corporation.setSmartSupplyOption(DIV2.name, city, mat, "leftovers");
                     }
                 }
             }

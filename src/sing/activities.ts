@@ -1,4 +1,4 @@
-import type { NS } from "@ns";
+import type { NS, CityName, CompanyName, JobField, UniversityLocationName } from "@ns";
 import type { DeepReadonly } from "ts-essentials";
 import { parseConfig } from "configHelper";
 import { lowestCombatStat } from "/sing/utils";
@@ -108,7 +108,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     const CHARISMA_TARG = 250;
 
     function goForAchievo() {
-        return !(eval("document.achievements") as string[]).includes(ACHIEVO_NAME) && ns.getPlayer().hasCorporation;
+        return !(eval("document.achievements") as string[]).includes(ACHIEVO_NAME) && ns.corporation.hasCorporation();
     }
 
     /** @modifies {working} */
@@ -123,22 +123,22 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
 
     /** Augmentations offered by every faction */
     const COMMON_AUGS = ["NeuroFlux Governor"];
-    const UNIS = new Map([
+    const UNIS = new Map<`${CityName}`, `${UniversityLocationName}`>([
         ["Sector-12", "Rothman University"],
         ["Aevum", "Summit University"],
         ["Volhaven", "ZB Institute of Technology"],
     ]);
     /** A map of City faction name to [City needed, Money needed, Hacking level needed]
      * @type {Map<string, [string, number, number, string[]]} */
-    const CITY_FACTIONS = new Map<string, [string, number, number, string[]]>([
+    const CITY_FACTIONS = new Map<string, [CityName, number, number, string[]]>([
         /* eslint-disable no-magic-numbers */
-        ["Sector-12", ["Sector-12", 15e6, 0, ["Chongqing", "Ishima", "New Tokyo", "Volhaven"]]],
-        ["Aevum", ["Aevum", 40e6, 0, ["Chongqing", "Ishima", "New Tokyo", "Volhaven"]]],
-        ["Chongqing", ["Chongqing", 20e6, 0, ["Sector-12", "Aevum", "Volhaven"]]],
-        ["Ishima", ["Ishima", 30e6, 0, ["Sector-12", "Aevum", "Volhaven"]]],
-        ["New Tokyo", ["New Tokyo", 20e6, 0, ["Sector-12", "Aevum", "Volhaven"]]],
-        ["Volhaven", ["Volhaven", 50e6, 0, ["Sector-12", "Aevum", "Chongqing", "Ishima", "New Tokyo"]]],
-        ["Tian Di Hui", ["Chongqing", 1e6, 50, []]],
+        ["Sector-12", [ns.enums.CityName.Sector12, 15e6, 0, ["Chongqing", "Ishima", "New Tokyo", "Volhaven"]]],
+        ["Aevum", [ns.enums.CityName.Aevum, 40e6, 0, ["Chongqing", "Ishima", "New Tokyo", "Volhaven"]]],
+        ["Chongqing", [ns.enums.CityName.Chongqing, 20e6, 0, ["Sector-12", "Aevum", "Volhaven"]]],
+        ["Ishima", [ns.enums.CityName.Ishima, 30e6, 0, ["Sector-12", "Aevum", "Volhaven"]]],
+        ["New Tokyo", [ns.enums.CityName.NewTokyo, 20e6, 0, ["Sector-12", "Aevum", "Volhaven"]]],
+        ["Volhaven", [ns.enums.CityName.Volhaven, 50e6, 0, ["Sector-12", "Aevum", "Chongqing", "Ishima", "New Tokyo"]]],
+        ["Tian Di Hui", [ns.enums.CityName.Chongqing, 1e6, 50, []]],
         /* eslint-enable no-magic-numbers */
     ]);
     const AIRFARE = 200e3;
@@ -148,20 +148,20 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     /** Map of Company Faction Name to [City, Company Name, Company Reputation Required, Hacking Level for Entry-Level Job]
      * @type {Map<string, [string, string, number, number]>} */
     // Note: the Company city names are currently unused
-    const COMPANY_LOOKUP = new Map<string, [string, string, number, number]>([
-        ["ECorp", ["Aevum", "ECorp", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
-        ["MegaCorp", ["Sector-12", "MegaCorp", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],  // 300 combat, 250 char
-        ["KuaiGong International", ["Chongqing", "KuaiGong International", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
-        ["Four Sigma", ["Sector-12", "Four Sigma", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],  // 275 combat, 225 char
-        ["NWO", ["Volhaven", "NWO", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
-        ["Blade Industries", ["Sector-12", "Blade Industries", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],  // 275 combat, 225 char
-        ["OmniTek Incorporated", ["Volhaven", "OmniTek Incorporated", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
-        ["Bachman & Associates", ["Aevum", "Bachman & Associates", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
-        ["Clarke Incorporated", ["Aevum", "Clarke Incorporated", DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
-        ["Fulcrum Secret Technologies", ["Aevum", "Fulcrum Technologies", FULCRUM_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+    const COMPANY_LOOKUP = new Map<string, [`${CityName}`, CompanyName, number, number]>([
+        ["ECorp", ["Aevum", ns.enums.CompanyName.ECorp, DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["MegaCorp", ["Sector-12", ns.enums.CompanyName.MegaCorp, DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],  // 300 combat, 250 char
+        ["KuaiGong International", ["Chongqing", ns.enums.CompanyName.KuaiGongInternational, DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["Four Sigma", ["Sector-12", ns.enums.CompanyName.FourSigma, DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],  // 275 combat, 225 char
+        ["NWO", ["Volhaven", ns.enums.CompanyName.NWO, DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["Blade Industries", ["Sector-12", ns.enums.CompanyName.BladeIndustries, DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],  // 275 combat, 225 char
+        ["OmniTek Incorporated", ["Volhaven", ns.enums.CompanyName.OmniTekIncorporated, DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["Bachman & Associates", ["Aevum", ns.enums.CompanyName.BachmanAndAssociates, DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["Clarke Incorporated", ["Aevum", ns.enums.CompanyName.ClarkeIncorporated, DEFAULT_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
+        ["Fulcrum Secret Technologies", ["Aevum", ns.enums.CompanyName.FulcrumTechnologies, FULCRUM_COMPANY_REP_REQ, COMPANY_BASE_HACKING_LEVEL]],
     ]);
-    const HACKING_JOB_PRIOS = ["software", "software consultant", "it", "security engineer", "network engineer", "business", "business consultant", "security", "agent", "employee"];
-    const COMBAT_JOB_PRIOS = ["agent", "security", "business", "business consultant", "software", "software consultant", "it", "security engineer", "network engineer", "employee"];
+    const HACKING_JOB_PRIOS: `${JobField}`[] = ["Software", "Software Consultant", "IT", "Security Engineer", "Network Engineer", "Business", "Business Consultant", "Security", "Agent", "Employee"];
+    const COMBAT_JOB_PRIOS: `${JobField}`[] = ["Agent", "Security", "Business", "Business Consultant", "Software", "Software Consultant", "IT", "Security Engineer", "Network Engineer", "Employee"];
 
     // Factions that you cannot work for (at least in the usual way)
     const NO_WORK_FACTIONS = ["Shadows of Anarchy", "Bladeburners"];
@@ -180,7 +180,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
      * @param {string} company
      * @param {number} untilRep the reputation to keep working until reached
     */
-    function tryWorkForCompany(company: string, untilRep = Infinity) {
+    function tryWorkForCompany(company: CompanyName, untilRep = Infinity) {
         const jobPrios = combatBn ? COMBAT_JOB_PRIOS : HACKING_JOB_PRIOS;
         for (const job of jobPrios) {
             if (ns.singularity.applyToCompany(company, job)) {
@@ -317,7 +317,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             if (working || repToGain() < 0) continue;
             ns.scriptKill("share.js", HOST);
 
-            if (ns.getPlayer().hasCorporation) {
+            if (ns.corporation.hasCorporation()) {
                 ns.print("Attempting to bribe faction ", faction);
                 // Try to use corp funds to get the faction rep high enough
                 ns.run("/sing/bribeWithCorpFunds.js", 1, faction, repToGain());
@@ -542,14 +542,14 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             // Use actions to make money
             let maxCompanyRep = -Infinity;
             let maxRepCompany = null;
-            const companies = new Set<string>();
+            const companies = new Set<CompanyName>();
             for (const [, [, company,, ]] of COMPANY_LOOKUP) {
                 companies.add(company);
             }
             // A map of company name to position held in the company
             const jobs = ns.getPlayer().jobs;
             for (const [company, ] of Object.entries(jobs)) {
-                companies.add(company);
+                companies.add(company as CompanyName);
             }
             for (const company of companies) {
                 const rep = ns.singularity.getCompanyRep(company);
@@ -583,7 +583,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 if (uni) {
                     ns.print(`attempting to study at ${uni}`);
                     const focus = ns.singularity.isBusy() && ns.singularity.isFocused();
-                    ns.singularity.universityCourse(uni, "Study Computer Science", focus);
+                    ns.singularity.universityCourse(uni, "Computer Science", focus);
                     return;
                 } else {
                     ns.tail();

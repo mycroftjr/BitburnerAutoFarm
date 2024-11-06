@@ -29,8 +29,11 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
     const NON_WORLD_DAEMON_BNS = [6, 7];
 
     const player = ns.getPlayer();
-    const bn = player.bitNodeN;
-    const maxHackLevel = NON_WORLD_DAEMON_BNS.includes(bn) ? 0 : ns.getServerRequiredHackingLevel("w0r1d_d43m0n");
+    const bn = ns.getResetInfo().currentNode; //player.bitNodeN;
+    let maxHackLevel = NON_WORLD_DAEMON_BNS.includes(bn) ? 0 : 3000;
+    try {
+        maxHackLevel = ns.getServerRequiredHackingLevel("w0r1d_d43m0n");
+    } catch {}
     const bn1Challenge = bn === 1 && !(eval("document.achievements") as string[]).includes("BN1: Challenge");
 	while (true) {
         if (player.skills.hacking >= maxHackLevel)

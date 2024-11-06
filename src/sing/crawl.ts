@@ -45,16 +45,21 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
         const hl = ns.getHackingLevel();
         for (const server of SERVERS_OF_INTEREST) {
             const s = ns.getServer(server);
-            if (!s.backdoorInstalled && s.hasAdminRights && s.requiredHackingSkill < hl) {
+            if (!s.backdoorInstalled && s.hasAdminRights && (s.requiredHackingSkill ?? Infinity) < hl) {
                 let steps = dir.get(server);
                 if (!steps) dir = scanAll();
                 steps = dir.get(server);
                 if (!steps) continue;
                 const old = ns.singularity.getCurrentServer();
+                let allConnectsGood = true;
                 for (const step of steps) {
-                    ns.singularity.connect(step);
+                    if (!ns.singularity.connect(step)) {
+                        allConnectsGood = false;
+                        break;
+                    }
                 }
-                await ns.singularity.installBackdoor();
+                if (allConnectsGood)
+                    await ns.singularity.installBackdoor();
                 ns.singularity.connect(old);
                 numUnbackdoored--;
             }

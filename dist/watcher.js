@@ -1,45 +1,36 @@
-
 export async function main(ns) {
     const hashes = {};
-    
     const files = ns.ls("home", ".js");
     for (const file of files) {
         const contents = ns.read(file);
         hashes[file] = getHash(contents);
     }
-    
     while (true) {
         const files = ns.ls("home", ".js");
-        
         for (const file of files) {
             const contents = ns.read(file);
             const hash = getHash(contents);
-            
             if (hash != hashes[file]) {
                 ns.tprintf(`INFO: Detected change in ${file}`);
-                
                 const processes = ns.ps().filter((p) => {
                     return p.filename == file;
                 });
-                
                 for (const process of processes) {
                     ns.tprintf(`INFO: Restarting ${process.filename} ${process.args} -t ${process.threads}`);
                     if (process.filename != ns.getScriptName()) {
                         ns.kill(process.pid);
                         ns.run(process.filename, process.threads, ...process.args);
-                    } else {
+                    }
+                    else {
                         ns.spawn(process.filename, process.threads, ...process.args);
                     }
                 }
-                
                 hashes[file] = hash;
             }
         }
-        
         await ns.sleep(1000);
     }
 }
-
 const getHash = (input) => {
     let hash = 0, i, chr;
     if (input.length === 0)
@@ -51,3 +42,4 @@ const getHash = (input) => {
     }
     return hash;
 };
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoid2F0Y2hlci5qcyIsInNvdXJjZVJvb3QiOiJodHRwOi8vbG9jYWxob3N0OjgwMDAvc291cmNlcy8iLCJzb3VyY2VzIjpbIndhdGNoZXIudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBR0EsTUFBTSxDQUFDLEtBQUssVUFBVSxJQUFJLENBQUMsRUFBb0I7SUFDM0MsTUFBTSxNQUFNLEdBQTJCLEVBQUUsQ0FBQztJQUUxQyxNQUFNLEtBQUssR0FBRyxFQUFFLENBQUMsRUFBRSxDQUFDLE1BQU0sRUFBRSxLQUFLLENBQUMsQ0FBQztJQUNuQyxLQUFLLE1BQU0sSUFBSSxJQUFJLEtBQUssRUFBRTtRQUN0QixNQUFNLFFBQVEsR0FBRyxFQUFFLENBQUMsSUFBSSxDQUFDLElBQUksQ0FBQyxDQUFDO1FBQy9CLE1BQU0sQ0FBQyxJQUFJLENBQUMsR0FBRyxPQUFPLENBQUMsUUFBUSxDQUFDLENBQUM7S0FDcEM7SUFFRCxPQUFPLElBQUksRUFBRTtRQUNULE1BQU0sS0FBSyxHQUFHLEVBQUUsQ0FBQyxFQUFFLENBQUMsTUFBTSxFQUFFLEtBQUssQ0FBQyxDQUFDO1FBRW5DLEtBQUssTUFBTSxJQUFJLElBQUksS0FBSyxFQUFFO1lBQ3RCLE1BQU0sUUFBUSxHQUFHLEVBQUUsQ0FBQyxJQUFJLENBQUMsSUFBSSxDQUFDLENBQUM7WUFDL0IsTUFBTSxJQUFJLEdBQUcsT0FBTyxDQUFDLFFBQVEsQ0FBQyxDQUFDO1lBRS9CLElBQUksSUFBSSxJQUFJLE1BQU0sQ0FBQyxJQUFJLENBQUMsRUFBRTtnQkFDdEIsRUFBRSxDQUFDLE9BQU8sQ0FBQyw0QkFBNEIsSUFBSSxFQUFFLENBQUMsQ0FBQztnQkFFL0MsTUFBTSxTQUFTLEdBQUcsRUFBRSxDQUFDLEVBQUUsRUFBRSxDQUFDLE1BQU0sQ0FBQyxDQUFDLENBQTRCLEVBQUUsRUFBRTtvQkFDOUQsT0FBTyxDQUFDLENBQUMsUUFBUSxJQUFJLElBQUksQ0FBQztnQkFDOUIsQ0FBQyxDQUFDLENBQUM7Z0JBRUgsS0FBSyxNQUFNLE9BQU8sSUFBSSxTQUFTLEVBQUU7b0JBQzdCLEVBQUUsQ0FBQyxPQUFPLENBQUMsb0JBQW9CLE9BQU8sQ0FBQyxRQUFRLElBQUksT0FBTyxDQUFDLElBQUksT0FBTyxPQUFPLENBQUMsT0FBTyxFQUFFLENBQUMsQ0FBQztvQkFDekYsSUFBSSxPQUFPLENBQUMsUUFBUSxJQUFJLEVBQUUsQ0FBQyxhQUFhLEVBQUUsRUFBRTt3QkFDeEMsRUFBRSxDQUFDLElBQUksQ0FBQyxPQUFPLENBQUMsR0FBRyxDQUFDLENBQUM7d0JBQ3JCLEVBQUUsQ0FBQyxHQUFHLENBQUMsT0FBTyxDQUFDLFFBQVEsRUFBRSxPQUFPLENBQUMsT0FBTyxFQUFFLEdBQUcsT0FBTyxDQUFDLElBQUksQ0FBQyxDQUFDO3FCQUM5RDt5QkFBTTt3QkFDSCxFQUFFLENBQUMsS0FBSyxDQUFDLE9BQU8sQ0FBQyxRQUFRLEVBQUUsT0FBTyxDQUFDLE9BQU8sRUFBRSxHQUFHLE9BQU8sQ0FBQyxJQUFJLENBQUMsQ0FBQztxQkFDaEU7aUJBQ0o7Z0JBRUQsTUFBTSxDQUFDLElBQUksQ0FBQyxHQUFHLElBQUksQ0FBQzthQUN2QjtTQUNKO1FBRUQsTUFBTSxFQUFFLENBQUMsS0FBSyxDQUFDLElBQUksQ0FBQyxDQUFDO0tBQ3hCO0FBQ0wsQ0FBQztBQUVELE1BQU0sT0FBTyxHQUFHLENBQUMsS0FBYSxFQUFVLEVBQUU7SUFDdEMsSUFBSSxJQUFJLEdBQUcsQ0FBQyxFQUFFLENBQUMsRUFBRSxHQUFHLENBQUM7SUFDckIsSUFBSSxLQUFLLENBQUMsTUFBTSxLQUFLLENBQUM7UUFBRSxPQUFPLElBQUksQ0FBQztJQUNwQyxLQUFLLENBQUMsR0FBRyxDQUFDLEVBQUUsQ0FBQyxHQUFHLEtBQUssQ0FBQyxNQUFNLEVBQUUsQ0FBQyxFQUFFLEVBQUU7UUFDL0IsR0FBRyxHQUFHLEtBQUssQ0FBQyxVQUFVLENBQUMsQ0FBQyxDQUFDLENBQUM7UUFDMUIsSUFBSSxHQUFHLENBQUMsQ0FBQyxJQUFJLElBQUksQ0FBQyxDQUFDLEdBQUcsSUFBSSxDQUFDLEdBQUcsR0FBRyxDQUFDO1FBQ2xDLElBQUksSUFBSSxDQUFDLENBQUMsQ0FBQywyQkFBMkI7S0FDekM7SUFDRCxPQUFPLElBQUksQ0FBQztBQUNoQixDQUFDLENBQUMifQ==
