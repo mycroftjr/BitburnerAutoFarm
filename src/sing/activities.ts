@@ -193,7 +193,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                 ns.scriptKill("share.js", HOST);
                 if (ns.run("/sing/workForCompany.js", 1, company, job, untilRep)) {
                     if (untilRep != Infinity)
-                        ns.tprint(`Working for company ${company} (${ns.nFormat(untilRep, "0a")} rep needed)`);
+                        ns.tprint(`Working for company ${company} (${ns.formatNumber(untilRep, 0)} rep needed)`);
                 } else {
                     ns.tprint(`Failed to start working for company ${company}! Is there enough free RAM?`);
                 }
@@ -336,7 +336,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
                     ns.scriptKill("/sing/doCrime.js", HOST);
                     if (!haveBladeburnerAug) ns.scriptKill("/bladeburner/bladeburner.js", HOST);
                     if (ns.run("/sing/workForFaction.js", 1, faction, repNeeded, combatBn, CHARISMA_TARG)) {
-                        ns.tprint(`Working towards aug ${aug} from ${faction} (${ns.nFormat(repNeeded, "0a")} rep needed)`);
+                        ns.tprint(`Working towards aug ${aug} from ${faction} (${ns.formatNumber(repNeeded, 0)} rep needed)`);
                         working = true;
                     } else {
                         ns.tprint(`Failed to start working for faction ${faction}! Is there enough free RAM?`);

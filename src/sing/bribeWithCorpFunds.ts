@@ -11,11 +11,11 @@ export function main(ns: DeepReadonly<NS>): void {
     const donationAmount = Math.ceil(repToGain * BRIBE_TO_REP_RATIO);
     if (ns.corporation.getCorporation().funds * MAX_SPEND_RATIO > donationAmount) {
         if (ns.corporation.bribe(faction, donationAmount)) {
-            ns.print(`Bribed ${faction} with $${ns.nFormat(donationAmount, "0a")} successfully!`);
+            ns.print(`Bribed ${faction} with $${ns.formatNumber(donationAmount, 0)} successfully!`);
         } else {
             ns.print("Bribe unsuccessful???");
         }
     } else {
-        ns.print(`Not enough corp money to comfortably bribe ${faction} with $${ns.nFormat(donationAmount, "0a")}`);
+        ns.print(`Not enough corp money to comfortably bribe ${faction} with $${ns.formatNumber(donationAmount, 0)}`);
     }
 }

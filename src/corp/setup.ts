@@ -62,7 +62,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             ns.corporation.createCorporation(CORP_NAME, false);
         } else {
             ns.tail();
-            ns.print("Please go to Cityhall in ", HOME_CITY, " and self-fund a corporation using at least $", ns.nFormat(SEED_MONEY, "0a"));
+            ns.print("Please go to Cityhall in ", HOME_CITY, " and self-fund a corporation using at least $", ns.formatNumber(SEED_MONEY, 0));
         }
     }
     if (!ns.corporation.hasCorporation())
@@ -152,7 +152,7 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             if (offer.shares / corp.totalShares > investInfo.sharePercent / CENT)
                 throw `${ns.nFormat(offer.round, "0o")} investment offer asking for more than ${investInfo.sharePercent}% of shares???`;
             if (!FULL_AUTO) {
-                const approved = await ns.prompt(`Accept ${ns.nFormat(offer.round, "0o")} round investment of $${ns.nFormat(offer.funds, "0.00a")} `
+                const approved = await ns.prompt(`Accept ${ns.nFormat(offer.round, "0o")} round investment of $${ns.formatNumber(offer.funds, 2)} `
                     + `for ${offer.shares/corp.totalShares*CENT}% of shares?`) as boolean;
                 if (!approved) return false;
             }
@@ -254,8 +254,8 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             ns.tail();
             ns.print("Please buy the following in each Warehouse of ", DIV1.name, " for a single tick: ");
             for (const [mat, amt] of INIT_MATERIALS) {
-                ns.print(mat, " at ", amt/WAREHOUSE_SECS_PER_TICK, " (", ns.nFormat(amt/WAREHOUSE_SECS_PER_TICK, "0.0a"),
-                    ")/s for one tick to ", ns.nFormat(amt, "0a"), " total");
+                ns.print(mat, " at ", amt/WAREHOUSE_SECS_PER_TICK, " (", ns.formatNumber(amt/WAREHOUSE_SECS_PER_TICK, 1),
+                    ")/s for one tick to ", ns.formatNumber(amt, 0), " total");
             }
         }
 
@@ -334,9 +334,9 @@ export async function main(ns: DeepReadonly<NS>): Promise<void> {
             ns.tail();
             ns.print("Please buy the following in each Warehouse of ", DIV1.name, " for a single tick: ");
             for (const [mat, amt, diff] of MATERIALS2) {
-                ns.print(mat, " at ", diff/WAREHOUSE_SECS_PER_TICK, " (", ns.nFormat(diff/WAREHOUSE_SECS_PER_TICK, "0.0a"),
-                    ")/s for one tick to get to ", ns.nFormat(amt-diff, "0a"),
-                    " + ", ns.nFormat(diff, "0a"), " = ", ns.nFormat(amt, "0a"));
+                ns.print(mat, " at ", diff/WAREHOUSE_SECS_PER_TICK, " (", ns.formatNumber(diff/WAREHOUSE_SECS_PER_TICK, 1),
+                    ")/s for one tick to get to ", ns.formatNumber(amt-diff, 0),
+                    " + ", ns.formatNumber(diff, 0), " = ", ns.formatNumber(amt, 0));
             }
         }
 
